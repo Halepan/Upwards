@@ -1,4 +1,7 @@
-// src/domain/user.ts
+/*User_Domain se centra en la logica del usuario como dominio en si 
+ Todos sus modificadores llaman al metodo actualizar timestamp para que se realice
+ automaticamente */
+
 import { BaseEntity } from './base-entity'
 
 export type AuthMethod = 'pin' | 'biometric' | 'email'

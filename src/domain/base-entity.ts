@@ -1,3 +1,7 @@
+
+/* Dominio de la clase base-entidad que se centra en tener
+la base solida de todo el sitema estos atributos son inmodificables  
+*/
 export abstract class BaseEntity {
   protected _id?: number
   protected _uuid: string
