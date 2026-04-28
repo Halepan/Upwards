@@ -1,3 +1,4 @@
+// Clase encargada de la gestion de la entrada de ingresos 
 import { BaseEntity } from './base_entity'
 
 export type IncomeClassification = 'pasivo' | 'timeswap' | 'give' | 'otro'

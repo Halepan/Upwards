@@ -1,3 +1,4 @@
+//clase encargada de la gestion de las salida de el flujo de efectivo 
 import { BaseEntity } from './base_entity'
 
 export class ExpenseEntry extends BaseEntity {
