@@ -2,7 +2,7 @@
  Todos sus modificadores llaman al metodo actualizar timestamp para que se realice
  automaticamente */
 
-import { BaseEntity } from './base-entity'
+import { BaseEntity } from './base_entity'
 
 export type AuthMethod = 'pin' | 'biometric' | 'email'
 
