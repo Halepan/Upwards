@@ -1,14 +1,7 @@
-import { IRepository } from "./irepository";
+import type { IRepository } from './irepository'
 
-
-
-export abstract class  ISyncableRepossitory extends IRepository{
-
-    findPendingSync():undefined[]{
-        return[];
-    }
-
-    markAsSynced():void{}
-
-    findByUuid():undefined{}
+export interface ISyncableRepository<T> extends IRepository<T> {
+  findPendingSync(): Promise<T[]>
+  markAsSynced(id: number): Promise<void>
+  findByUuid(uuid: string): Promise<T | undefined>
 }
