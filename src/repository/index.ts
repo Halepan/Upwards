@@ -1,7 +1,7 @@
 // Base
 export { BaseDexieRepository } from './base_dexie_repository'
 export type { IRepository } from './irepository'
-export type { ISyncableRepository } from './isyncable_repository'
+export type { ISyncableRepository } from './isincablerepository'
 
 // Hábitos
 export { HabitRepository } from './habit_repository'
@@ -13,5 +13,5 @@ export { HabitWeekPlanRepository } from './habit_week_plan_repository'
 export { ExerciseRepository } from './exercise_repository'
 export { RoutineRepository } from './routine_repository'
 export { RoutineExerciseRepository } from './routine_exercise_repository'
-export { RoutineLogRepository } from './routine_log_repository.ts'
+export { RoutineLogRepository } from './routine_log_repository'
 export { RoutineLogDetailRepository } from './routine_log_detail_repository'

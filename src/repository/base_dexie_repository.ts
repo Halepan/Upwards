@@ -1,40 +1,61 @@
 import type { Table } from 'dexie'
 import type { BaseEntity } from '../domain/base_entity'
 import type { ISyncableRepository } from './isincablerepository'
+import type { BaseEntity as BE } from '../lib/db'
+/**
+ * Repositorio base que maneja dos tipos:
+ * - TData : la interfaz plana que Dexie devuelve / espera (snake_case)
+ * - TDomain : la clase de dominio que usan los servicios (camelCase)
+ */
+export abstract class BaseDexieRepository<
+  TData extends BE,
+  TDomain extends BaseEntity
+> implements ISyncableRepository<TDomain> {
 
-export abstract class BaseDexieRepository<T extends BaseEntity> implements ISyncableRepository<T> {
-  protected table: Table<T, number>
+  protected table: Table<TData, number>
 
-  constructor(table: Table<T, number>) {
+  constructor(table: Table<TData, number>) {
     this.table = table
   }
 
-  async findById(id: number): Promise<T | undefined> {
-    return this.table.get(id)
+  // Métodos de conversión que cada subclase implementará usando los estáticos del dominio
+  protected abstract fromDB(data: TData): TDomain
+  protected abstract toDB(domain: TDomain): TData
+
+  async findById(id: number): Promise<TDomain | undefined> {
+    const data = await this.table.get(id)
+    return data ? this.fromDB(data) : undefined
   }
 
-  async findAll(): Promise<T[]> {
-    return this.table.toArray()
+  async findAll(): Promise<TDomain[]> {
+    const data = await this.table.toArray()
+    return data.map(d => this.fromDB(d))
   }
 
-  async save(entity: T): Promise<T> {
-    const id = await this.table.put(entity)
-    return this.table.get(id) as Promise<T>
+  async save(entity: TDomain): Promise<TDomain> {
+    const dbObj = this.toDB(entity)
+    const id = await this.table.put(dbObj as any)
+    const saved = await this.table.get(id)
+    return this.fromDB(saved!)
   }
 
   async delete(id: number): Promise<void> {
     await this.table.delete(id)
   }
 
-  async findPendingSync(): Promise<T[]> {
-    return this.table.where('sync_status').equals('pending').toArray()
+  async findPendingSync(): Promise<TDomain[]> {
+    const data = await this.table
+      .where('sync_status').equals('pending')
+      .toArray()
+    return data.map(d => this.fromDB(d))
   }
 
   async markAsSynced(id: number): Promise<void> {
     await this.table.update(id, { sync_status: 'synced' } as any)
   }
 
-  async findByUuid(uuid: string): Promise<T | undefined> {
-    return this.table.where('uuid').equals(uuid).first()
+  async findByUuid(uuid: string): Promise<TDomain | undefined> {
+    const data = await this.table.where('uuid').equals(uuid).first()
+    return data ? this.fromDB(data) : undefined
   }
 }

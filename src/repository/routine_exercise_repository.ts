@@ -1,19 +1,30 @@
 import type { Table } from 'dexie'
 import { BaseDexieRepository } from './base_dexie_repository'
-import type { RoutineExercise } from '../domain/routine_exercise'
+import type { RoutineExercise as RoutineExerciseData } from '../lib/db'
+import { RoutineExercise } from '../domain/routine_exercise'
 
-export class RoutineExerciseRepository extends BaseDexieRepository<RoutineExercise> {
-  constructor(table: Table<RoutineExercise, number>) {
+export class RoutineExerciseRepository extends BaseDexieRepository<RoutineExerciseData, RoutineExercise> {
+  constructor(table: Table<RoutineExerciseData, number>) {
     super(table)
   }
 
+  protected fromDB(data: RoutineExerciseData): RoutineExercise {
+    return RoutineExercise.fromDB(data)
+  }
+
+  protected toDB(domain: RoutineExercise): RoutineExerciseData {
+    return domain.toDB() as RoutineExerciseData
+  }
+
   async findByRoutine(routineId: number): Promise<RoutineExercise[]> {
-    return this.table
+    const data = await this.table
       .where('routine_id').equals(routineId)
       .sortBy('order_index')
+    return data.map(d => this.fromDB(d))
   }
 
   async findByRoutineAndExercise(routineId: number, exerciseId: number): Promise<RoutineExercise | undefined> {
-    return this.table.where({ routine_id: routineId, exercise_id: exerciseId }).first()
+    const data = await this.table.where({ routine_id: routineId, exercise_id: exerciseId }).first()
+    return data ? this.fromDB(data) : undefined
   }
 }
