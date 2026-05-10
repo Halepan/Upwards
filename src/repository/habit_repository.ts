@@ -23,4 +23,12 @@ export class HabitRepository extends BaseDexieRepository<Habit> {
     await this.table.update(id, { is_archived: true } as any)
     await this.markAsSynced(id) // opcional: forzar que se sincronice
   }
+
+  async findByName(userId: number, name: string): Promise<Habit[]> {
+    const lowerName = name.toLowerCase()
+    return this.table
+      .where('user_id').equals(userId)
+      .filter(h => h.name.toLowerCase().includes(lowerName))
+      .toArray()
+  }
 }
