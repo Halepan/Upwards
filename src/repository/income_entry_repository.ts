@@ -41,4 +41,9 @@ export class IncomeEntryRepository extends BaseDexieRepository<IncomeEntryData, 
     const entries = await this.findByUserId(user_id)
     return entries.reduce((sum, e) => sum + e.amount, 0)
   }
+
+  async getTotalAmountInRange(user_id: number, startDate: string, endDate: string): Promise<number> {
+    const entries = await this.findByDateRange(user_id, startDate, endDate)
+    return entries.reduce((sum, e) => sum + e.amount, 0)
+  }
 }
