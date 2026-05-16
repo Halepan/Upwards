@@ -1,7 +1,7 @@
 // Base
 export { BaseDexieRepository } from './base_dexie_repository'
 export type { IRepository } from './irepository'
-export type { ISyncableRepository } from './isincablerepository'
+export type { ISyncableRepository } from './isyncable_repository'
 
 // Hábitos
 export { HabitRepository } from './habit_repository'

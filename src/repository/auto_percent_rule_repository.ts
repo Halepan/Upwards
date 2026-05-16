@@ -18,13 +18,13 @@ export class AutoPercentRuleRepository extends BaseDexieRepository<AutoPercentRu
 
   async findByTargetAccount(account_id: number): Promise<AutoPercentRule[]> {
     const data = await this.table.where('target_account_id').equals(account_id).toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(rule => this.fromDB(rule))
   }
 
   async getActiveRules(): Promise<AutoPercentRule[]> {
     const data = await this.table
-      .filter(r => r.is_active)
+      .filter(rule => rule.is_active)
       .toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(rule => this.fromDB(rule))
   }
 }

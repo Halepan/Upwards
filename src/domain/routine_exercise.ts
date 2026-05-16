@@ -1,4 +1,5 @@
-// Esta clase se encarga de enlazar rutina y ejercicio manejando la relacion d emucho a muchos
+/* Entidad puente muchos-a-muchos entre Routine y Exercise.
+   Almacena las repeticiones objetivo, el orden dentro de la rutina y notas. */
 import { BaseEntity } from './base_entity'
 
 export class RoutineExercise extends BaseEntity {
@@ -28,14 +29,12 @@ export class RoutineExercise extends BaseEntity {
     this._notes = notes
   }
 
-  // Getters
   get routineId(): number { return this._routineId }
   get exerciseId(): number { return this._exerciseId }
   get targetReps(): number { return this._targetReps }
   get orderIndex(): number { return this._orderIndex }
   get notes(): string | undefined { return this._notes }
 
-  // Setters
   set targetReps(value: number) {
     if (value <= 0) throw new Error('Las repeticiones objetivo deben ser mayores que cero')
     this._targetReps = value
@@ -50,7 +49,6 @@ export class RoutineExercise extends BaseEntity {
     this.updateTimestamp()
   }
 
-  // Conversión
   static fromDB(data: any): RoutineExercise {
     return new RoutineExercise(
       data.id,

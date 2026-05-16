@@ -1,7 +1,5 @@
-/*
-Esta es la clase principal del modulo de habitos,
-debido que es la definicion del habito en si 
-*/
+/* Entidad de dominio que define un hábito: su nombre, frecuencia semanal objetivo,
+   color e ícono para la UI, y estado de archivado. */
 
 import { BaseEntity } from './base_entity'
 
@@ -37,7 +35,6 @@ export class Habit extends BaseEntity {
     this._isArchived = isArchived
   }
 
-  // Getters
   get userId(): number { return this._userId }
   get name(): string { return this._name }
   get description(): string | undefined { return this._description }
@@ -46,7 +43,6 @@ export class Habit extends BaseEntity {
   get icon(): string { return this._icon }
   get isArchived(): boolean { return this._isArchived }
 
-  // Setters
   set name(value: string) {
     this._name = value
     this.updateTimestamp()
@@ -69,12 +65,13 @@ export class Habit extends BaseEntity {
     this.updateTimestamp()
   }
 
-  // Métodos de negocio
+  /* Marca el hábito como archivado (oculto de la vista activa). */
   archive(): void {
     this._isArchived = true
     this.updateTimestamp()
   }
 
+  /* Restaura un hábito archivado a activo. */
   restore(): void {
     this._isArchived = false
     this.updateTimestamp()
@@ -84,7 +81,6 @@ export class Habit extends BaseEntity {
     return !this._isArchived
   }
 
-  // Conversión
   static fromDB(data: any): Habit {
     return new Habit(
       data.id,

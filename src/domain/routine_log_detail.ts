@@ -1,5 +1,5 @@
-/*Esta clase se centra en que despues de una rutina se pueden registrar los datos
-permitiendo manejar el progreso en fuerza o resistencia de cada grupo*/
+/* Detalle de un registro de rutina: asocia un ejercicio específico con
+   las repeticiones realizadas. Permite trackear progreso por ejercicio. */
 import { BaseEntity } from './base_entity'
 
 export class RoutineLogDetail extends BaseEntity {
@@ -23,19 +23,16 @@ export class RoutineLogDetail extends BaseEntity {
     this._repsDone = repsDone
   }
 
-  // Getters
   get routineLogId(): number { return this._routineLogId }
   get exerciseId(): number { return this._exerciseId }
   get repsDone(): number { return this._repsDone }
 
-  // Setters
   set repsDone(value: number) {
     if (value < 0) throw new Error('Las repeticiones realizadas no pueden ser negativas')
     this._repsDone = value
     this.updateTimestamp()
   }
 
-  // Conversión
   static fromDB(data: any): RoutineLogDetail {
     return new RoutineLogDetail(
       data.id,

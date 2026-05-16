@@ -1,9 +1,10 @@
-// Esta classe se encarga d manejar el estado y cumplimiento de las rutinas
+/* Registro diario de ejecución de una rutina completa.
+   Registra si se completó y las notas del entrenamiento. */
 import { BaseEntity } from './base_entity'
 
 export class RoutineLog extends BaseEntity {
   private _routineId: number
-  private _date: string          // YYYY-MM-DD
+  private _date: string
   private _notes?: string
   private _completed: boolean
 
@@ -24,19 +25,16 @@ export class RoutineLog extends BaseEntity {
     this._completed = completed
   }
 
-  // Getters
   get routineId(): number { return this._routineId }
   get date(): string { return this._date }
   get notes(): string | undefined { return this._notes }
   get completed(): boolean { return this._completed }
 
-  // Setters
   set notes(value: string | undefined) {
     this._notes = value
     this.updateTimestamp()
   }
 
-  // Métodos de negocio
   complete(): void {
     this._completed = true
     this.updateTimestamp()
@@ -51,7 +49,6 @@ export class RoutineLog extends BaseEntity {
     return this._completed
   }
 
-  // Conversión
   static fromDB(data: any): RoutineLog {
     return new RoutineLog(
       data.id,

@@ -7,6 +7,7 @@ import { HabitWeekPlanRepository } from '../repository/habit_week_plan_repositor
 import { db } from '../lib/db'
 import { v4 as uuidv4 } from 'uuid'
 
+/* DTO para la creación de un nuevo hábito. */
 export interface CreateHabitDTO {
   userId: number
   name: string
@@ -16,6 +17,7 @@ export interface CreateHabitDTO {
   icon?: string
 }
 
+/* Progreso semanal de un hábito: días planificados vs completados. */
 export interface WeeklyProgress {
   weekStart: string
   plannedDays: number
@@ -24,6 +26,7 @@ export interface WeeklyProgress {
   percentage: number
 }
 
+/* Servicio que gestiona el ciclo de vida de hábitos: creación, registro diario y progreso semanal. */
 export class HabitService {
   private habitRepo: HabitRepository
   private habitLogRepo: HabitLogRepository
@@ -52,13 +55,15 @@ export class HabitService {
     return this.habitRepo.save(habit)
   }
 
+  /* Marca el estado diario de un hábito (completado/perdido/planeado).
+     Si ya existe un registro, lo actualiza; si no, crea uno nuevo. */
   async markDay(habitId: number, date: string, status: HabitStatus): Promise<void> {
-    const existing = await this.habitLogRepo.findByHabitAndDate(habitId, date)
-    if (existing) {
-      if (status === 'completed') existing.markCompleted()
-      else if (status === 'missed') existing.markMissed()
-      else existing.resetToPlanned()
-      await this.habitLogRepo.save(existing)
+    const existingLog = await this.habitLogRepo.findByHabitAndDate(habitId, date)
+    if (existingLog) {
+      if (status === 'completed') existingLog.markCompleted()
+      else if (status === 'missed') existingLog.markMissed()
+      else existingLog.resetToPlanned()
+      await this.habitLogRepo.save(existingLog)
     } else {
       const now = new Date().toISOString()
       const log = new HabitLog(
@@ -81,8 +86,8 @@ export class HabitService {
 
     const endDate = week.endDate ?? weekStart
     const logs = await this.habitLogRepo.findByHabitInRange(habitId, weekStart, endDate)
-    const completedDays = logs.filter(l => l.status === 'completed').length
-    const missedDays = logs.filter(l => l.status === 'missed').length
+    const completedDays = logs.filter(logEntry => logEntry.status === 'completed').length
+    const missedDays = logs.filter(logEntry => logEntry.status === 'missed').length
 
     return {
       weekStart,
@@ -102,7 +107,7 @@ export class HabitService {
 
     const endDate = week.endDate ?? weekStart
     const logs = await this.habitLogRepo.findByHabitInRange(habitId, weekStart, endDate)
-    const completedDates = new Set(logs.filter(l => l.isCompleted()).map(l => l.date))
+    const completedDates = new Set(logs.filter(logEntry => logEntry.isCompleted()).map(logEntry => logEntry.date))
 
     return plan.plannedDays
       .filter(day => {

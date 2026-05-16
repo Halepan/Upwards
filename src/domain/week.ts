@@ -1,14 +1,11 @@
-/*
-Esta clase se encarga de manejar el inicio y fin de las semanas,
-ademas de las notas que se agregaran para manejar mejor los habitos y tomar 
-aprendizajes de esto.
-*/
+/* Representa una semana calendario con fecha de inicio (lunes) y fin (domingo),
+   más notas de reflexión del usuario. Es la unidad de planificación de hábitos. */
 import { BaseEntity } from './base_entity'
 
 export class Week extends BaseEntity {
   private _userId: number
-  private _startDate: string   // YYYY-MM-DD (lunes)
-  private _endDate?: string    // YYYY-MM-DD (domingo)
+  private _startDate: string
+  private _endDate?: string
   private _notes?: string
 
   constructor(
@@ -28,13 +25,11 @@ export class Week extends BaseEntity {
     this._notes = notes
   }
 
-  // Getters
   get userId(): number { return this._userId }
   get startDate(): string { return this._startDate }
   get endDate(): string | undefined { return this._endDate }
   get notes(): string | undefined { return this._notes }
 
-  // Setters
   set notes(value: string | undefined) {
     this._notes = value
     this.updateTimestamp()
@@ -44,15 +39,13 @@ export class Week extends BaseEntity {
     this.updateTimestamp()
   }
 
-  // Método de negocio
-  getDayOfWeek(dateStr: string): number {
-    // Retorna 1 (lunes) a 7 (domingo) según ISO
-    const date = new Date(dateStr)
-    const day = date.getDay()
-    return day === 0 ? 7 : day
+  /* Convierte una fecha ISO a número de día ISO (1=lunes, 7=domingo). */
+  getDayOfWeek(dateString: string): number {
+    const parsedDate = new Date(dateString)
+    const javascriptDay = parsedDate.getDay()
+    return javascriptDay === 0 ? 7 : javascriptDay
   }
 
-  // Conversión
   static fromDB(data: any): Week {
     return new Week(
       data.id,

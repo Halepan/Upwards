@@ -7,6 +7,7 @@ import { AutoPercentRuleRepository } from '../repository/auto_percent_rule_repos
 import { db } from '../lib/db'
 import { v4 as uuidv4 } from 'uuid'
 
+/* DTO para registrar un ingreso con clasificación financiera. */
 export interface IncomeDTO {
   userId: number
   amount: number
@@ -15,6 +16,7 @@ export interface IncomeDTO {
   note?: string
 }
 
+/* DTO para registrar un gasto asociado a una cuenta. */
 export interface ExpenseDTO {
   accountId: number
   amount: number
@@ -23,6 +25,7 @@ export interface ExpenseDTO {
   note?: string
 }
 
+/* Servicio que orquesta las operaciones financieras: ingresos, gastos y reglas de asignación automática. */
 export class FinanceService {
   private accountRepo: AccountRepository
   private incomeRepo: IncomeEntryRepository
@@ -47,9 +50,9 @@ export class FinanceService {
       undefined, uuidv4(), now, now,
       userId, data.amount, data.classification, data.date, data.note
     )
-    const saved = await this.incomeRepo.save(entry)
-    await this.applyAutoPercentRules(saved.id!)
-    return saved
+    const savedEntry = await this.incomeRepo.save(entry)
+    await this.applyAutoPercentRules(savedEntry.id!)
+    return savedEntry
   }
 
   async addExpense(accountId: number, data: ExpenseDTO): Promise<ExpenseEntry> {
@@ -63,28 +66,30 @@ export class FinanceService {
       undefined, uuidv4(), now, now,
       accountId, data.amount, data.category, data.date, data.note
     )
-    const saved = await this.expenseRepo.save(entry)
+    const savedEntry = await this.expenseRepo.save(entry)
     await this.accountRepo.save(account)
-    return saved
+    return savedEntry
   }
 
   async calculateSpendableBalance(userId: number): Promise<number> {
     const accounts = await this.accountRepo.findByUserId(userId)
-    const spendable = accounts.filter(a => a.type === 'spendable')
-    return spendable.reduce((sum, a) => sum + a.balance, 0)
+    const spendable = accounts.filter(account => account.type === 'spendable')
+    return spendable.reduce((total, account) => total + account.balance, 0)
   }
 
+  /* Recorre las reglas activas de porcentaje automático y deriva el monto correspondiente
+     a cada cuenta destino al registrar un nuevo ingreso. */
   async applyAutoPercentRules(incomeId: number): Promise<void> {
     const income = await this.incomeRepo.findById(incomeId)
     if (!income) return
 
     const rules = await this.ruleRepo.getActiveRules()
     for (const rule of rules) {
-      const amount = rule.apply(income.amount)
-      if (amount <= 0) continue
+      const derivedAmount = rule.apply(income.amount)
+      if (derivedAmount <= 0) continue
       const targetAccount = await this.accountRepo.findById(rule.targetAccountId)
       if (targetAccount) {
-        targetAccount.deposit(amount)
+        targetAccount.deposit(derivedAmount)
         await this.accountRepo.save(targetAccount)
       }
     }

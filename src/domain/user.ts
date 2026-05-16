@@ -1,6 +1,5 @@
-/*User_Domain se centra en la logica del usuario como dominio en si 
- Todos sus modificadores llaman al metodo actualizar timestamp para que se realice
- automaticamente */
+/* Entidad de dominio que representa al usuario del sistema.
+   Centraliza la lógica de autenticación y los datos de perfil. */
 
 import { BaseEntity } from './base_entity'
 
@@ -29,12 +28,10 @@ export class User extends BaseEntity {
     this._pinHash = pinHash
   }
 
-
   get name(): string { return this._name }
   get email(): string | undefined { return this._email }
   get authMethod(): AuthMethod { return this._authMethod }
   get pinHash(): string | undefined { return this._pinHash }
-
 
   set name(value: string) {
     this._name = value
@@ -53,6 +50,7 @@ export class User extends BaseEntity {
     this.updateTimestamp()
   }
 
+  /* Valida una credencial contra el método de autenticación configurado. */
   authenticate(credential: string): boolean {
     if (this._authMethod === 'pin' && this._pinHash) {
       return credential.length >= 4
@@ -60,7 +58,7 @@ export class User extends BaseEntity {
     return false
   }
 
-  // Fábrica desde datos planos (IndexedDB)
+  /* Fabrica una instancia User desde el formato plano de IndexedDB (snake_case). */
   static fromDB(data: any): User {
     return new User(
       data.id,
@@ -74,7 +72,7 @@ export class User extends BaseEntity {
     )
   }
 
-  // Conversión a formato de la base de datos local
+  /* Convierte la entidad al formato plano para persistencia local (snake_case). */
   toDB(): any {
     return {
       id: this._id,

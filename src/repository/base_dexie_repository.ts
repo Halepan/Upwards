@@ -1,6 +1,6 @@
 import type { Table } from 'dexie'
 import type { BaseEntity } from '../domain/base_entity'
-import type { ISyncableRepository } from './isincablerepository'
+import type { ISyncableRepository } from './isyncable_repository'
 import type { BaseEntity as BE } from '../lib/db'
 /**
  * Repositorio base que maneja dos tipos:
@@ -28,8 +28,8 @@ export abstract class BaseDexieRepository<
   }
 
   async findAll(): Promise<TDomain[]> {
-    const data = await this.table.toArray()
-    return data.map(d => this.fromDB(d))
+    const allData = await this.table.toArray()
+    return allData.map(item => this.fromDB(item))
   }
 
   async save(entity: TDomain): Promise<TDomain> {
@@ -47,7 +47,7 @@ export abstract class BaseDexieRepository<
     const data = await this.table
       .where('sync_status').equals('pending')
       .toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(item => this.fromDB(item))
   }
 
   async markAsSynced(id: number): Promise<void> {

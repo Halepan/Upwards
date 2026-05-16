@@ -8,17 +8,20 @@ import { ExerciseRepository } from '../repository/exercise_repository'
 import { db } from '../lib/db'
 import { v4 as uuidv4 } from 'uuid'
 
+/* DTO para crear una rutina nueva. */
 export interface RoutineDTO {
   userId: number
   name: string
   description?: string
 }
 
+/* DTO para registrar el detalle de un ejercicio dentro de un entrenamiento. */
 export interface LogDetailDTO {
   exerciseId: number
   repsDone: number
 }
 
+/* Resultado de la comparativa de progreso entre dos entrenamientos consecutivos. */
 export interface ProgressComparison {
   exerciseId: number
   exerciseName: string
@@ -27,6 +30,7 @@ export interface ProgressComparison {
   improvement: number
 }
 
+/* Servicio que gestiona rutinas de ejercicio, registros de entrenamiento y comparativa de progreso. */
 export class RoutineService {
   private routineRepo: RoutineRepository
   private routineLogRepo: RoutineLogRepository
@@ -75,8 +79,8 @@ export class RoutineService {
 
   async compareProgress(routineId: number, exerciseId: number): Promise<ProgressComparison> {
     const logs = await this.routineLogRepo.findAllByRoutine(routineId)
-    const completedLogs = logs.filter(l => l.isCompleted())
-      .sort((a, b) => a.date.localeCompare(b.date))
+    const completedLogs = logs.filter(logEntry => logEntry.isCompleted())
+      .sort((logA, logB) => logA.date.localeCompare(logB.date))
 
     const exercise = await this.exerciseRepo.findById(exerciseId)
 

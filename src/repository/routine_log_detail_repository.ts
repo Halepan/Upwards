@@ -18,7 +18,7 @@ export class RoutineLogDetailRepository extends BaseDexieRepository<RoutineLogDe
 
   async findByLog(routineLogId: number): Promise<RoutineLogDetail[]> {
     const data = await this.table.where('routine_log_id').equals(routineLogId).toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(detailData => this.fromDB(detailData))
   }
 
   async findByLogAndExercise(routineLogId: number, exerciseId: number): Promise<RoutineLogDetail | undefined> {

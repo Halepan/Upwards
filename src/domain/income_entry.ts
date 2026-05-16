@@ -1,4 +1,5 @@
-// Clase encargada de la gestion de la entrada de ingresos 
+/* Ingreso registrado por el usuario: monto, clasificación (pasivo, timeswap, give, otro),
+   fecha y nota. Es la entrada del flujo de efectivo. */
 import { BaseEntity } from './base_entity'
 
 export type IncomeClassification = 'pasivo' | 'timeswap' | 'give' | 'otro'
@@ -8,7 +9,7 @@ export class IncomeEntry extends BaseEntity {
   private _amount: number
   private _classification: IncomeClassification
   private _note?: string
-  private _date: string // YYYY-MM-DD
+  private _date: string
 
   constructor(
     id: number | undefined,
@@ -30,14 +31,12 @@ export class IncomeEntry extends BaseEntity {
     this._note = note
   }
 
-  // Getters
   get userId(): number { return this._userId }
   get amount(): number { return this._amount }
   get classification(): IncomeClassification { return this._classification }
   get note(): string | undefined { return this._note }
   get date(): string { return this._date }
 
-  // Setters (con validación)
   set amount(value: number) {
     if (value <= 0) throw new Error('El monto debe ser mayor que cero')
     this._amount = value
@@ -56,7 +55,6 @@ export class IncomeEntry extends BaseEntity {
     this.updateTimestamp()
   }
 
-  // Conversión
   static fromDB(data: any): IncomeEntry {
     return new IncomeEntry(
       data.id,

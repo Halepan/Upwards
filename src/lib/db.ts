@@ -1,8 +1,9 @@
 import Dexie, { type Table } from 'dexie'
 import { v4 as uuidv4 } from 'uuid'
 
-// Este modulo se encarga del ORM de la base de datos offline 
-// Es super importante por la arquitectura Offline-first
+/* Módulo ORM de la base de datos offline (IndexedDB vía Dexie).
+   Corazón de la arquitectura Offline-first: define schemas, tablas y hooks
+   que garantizan UUID, timestamps y sync_status en cada registro. */
 
 export interface BaseEntity {
   id?: number

@@ -6,6 +6,7 @@ import { AccountRepository } from '../repository/account_repository'
 import { RoutineLogRepository } from '../repository/routine_log_repository'
 import { db } from '../lib/db'
 
+/* Reporte mensual consolidado de hábitos, finanzas y fitness. */
 export interface MonthlyReport {
   userId: number
   year: number
@@ -25,6 +26,7 @@ export interface MonthlyReport {
   }
 }
 
+/* Servicio que genera reportes mensuales consolidados de todas las áreas del sistema. */
 export class ReportService {
   private habitRepo: HabitRepository
   private habitLogRepo: HabitLogRepository
@@ -61,32 +63,32 @@ export class ReportService {
     ])
 
     let totalCompletion = 0
-    let habitsWithLogs = 0
+    let habitsWithRecords = 0
     for (const habit of habits) {
       const logs = await this.habitLogRepo.findByHabitInRange(habit.id!, startDate, endDate)
       if (logs.length === 0) continue
-      habitsWithLogs++
-      const completed = logs.filter(l => l.isCompleted()).length
-      totalCompletion += (completed / logs.length) * 100
+      habitsWithRecords++
+      const completedLogs = logs.filter(logEntry => logEntry.isCompleted()).length
+      totalCompletion += (completedLogs / logs.length) * 100
     }
 
     const byAccount = []
     for (const account of accounts) {
       const expenses = await this.expenseRepo.findByAccount(account.id!)
       const totalExpensesForAccount = expenses
-        .filter(e => e.date >= startDate && e.date <= endDate)
-        .reduce((s, e) => s + e.amount, 0)
+        .filter(expense => expense.date >= startDate && expense.date <= endDate)
+        .reduce((total, expense) => total + expense.amount, 0)
 
       byAccount.push({ name: account.name, monthExpenses: totalExpensesForAccount })
     }
 
     const allExpenses = await this.expenseRepo.findAll()
     const totalExpenses = allExpenses
-      .filter(e => e.date >= startDate && e.date <= endDate)
-      .reduce((s, e) => s + e.amount, 0)
+      .filter(entry => entry.date >= startDate && entry.date <= endDate)
+      .reduce((total, entry) => total + entry.amount, 0)
 
     const workoutsCompleted = allRoutineLogs.filter(
-      l => l.date >= startDate && l.date <= endDate && l.isCompleted()
+      routineLog => routineLog.date >= startDate && routineLog.date <= endDate && routineLog.isCompleted()
     ).length
 
     return {
@@ -95,7 +97,7 @@ export class ReportService {
       month,
       habits: {
         total: habits.length,
-        averageCompletion: habitsWithLogs > 0 ? Math.round(totalCompletion / habitsWithLogs) : 0
+        averageCompletion: habitsWithRecords > 0 ? Math.round(totalCompletion / habitsWithRecords) : 0
       },
       finances: {
         totalIncome,
@@ -109,8 +111,8 @@ export class ReportService {
     }
   }
 
-  async exportToPDF(_report: MonthlyReport): Promise<Blob> {
-    const text = JSON.stringify(_report, null, 2)
+  async exportToPDF(report: MonthlyReport): Promise<Blob> {
+    const text = JSON.stringify(report, null, 2)
     return new Blob([text], { type: 'application/pdf' })
   }
 

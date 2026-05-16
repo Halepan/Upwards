@@ -23,15 +23,15 @@ export class HabitRepository extends BaseDexieRepository<HabitData, Habit> {
     const data = await this.table
       .where('user_id').equals(userId)
       .toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(habitData => this.fromDB(habitData))
   }
 
   async findActiveByUserId(userId: number): Promise<Habit[]> {
     const data = await this.table
       .where('user_id').equals(userId)
-      .filter(h => !h.is_archived)   // aquí 'h' es HabitData → snake_case
+      .filter(habitData => !habitData.is_archived)
       .toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(habitData => this.fromDB(habitData))
   }
 
   async archiveHabit(id: number): Promise<void> {
@@ -43,8 +43,8 @@ export class HabitRepository extends BaseDexieRepository<HabitData, Habit> {
     const lowerName = name.toLowerCase()
     const data = await this.table
       .where('user_id').equals(userId)
-      .filter(h => h.name.toLowerCase().includes(lowerName))
+      .filter(habitData => habitData.name.toLowerCase().includes(lowerName))
       .toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(habitData => this.fromDB(habitData))
   }
 }

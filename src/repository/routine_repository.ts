@@ -18,23 +18,23 @@ export class RoutineRepository extends BaseDexieRepository<RoutineData, Routine>
 
   async findByUserId(userId: number): Promise<Routine[]> {
     const data = await this.table.where('user_id').equals(userId).toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(routineData => this.fromDB(routineData))
   }
 
   async findActiveByUserId(userId: number): Promise<Routine[]> {
     const data = await this.table
       .where('user_id').equals(userId)
-      .filter(r => r.is_active)               // snake_case
+      .filter(routineData => routineData.is_active)
       .toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(routineData => this.fromDB(routineData))
   }
 
   async findByName(userId: number, name: string): Promise<Routine[]> {
     const lowerName = name.toLowerCase()
     const data = await this.table
       .where('user_id').equals(userId)
-      .filter(r => r.name.toLowerCase().includes(lowerName))
+      .filter(routineData => routineData.name.toLowerCase().includes(lowerName))
       .toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(routineData => this.fromDB(routineData))
   }
 }

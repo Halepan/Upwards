@@ -23,14 +23,14 @@ export class RoutineLogRepository extends BaseDexieRepository<RoutineLogData, Ro
 
   async findAllByRoutine(routineId: number): Promise<RoutineLog[]> {
     const data = await this.table.where('routine_id').equals(routineId).toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(logEntry => this.fromDB(logEntry))
   }
 
   async getCompletedLogs(routineId: number): Promise<RoutineLog[]> {
     const data = await this.table
       .where('routine_id').equals(routineId)
-      .filter(log => log.completed)
+      .filter(logEntry => logEntry.completed)
       .toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(logEntry => this.fromDB(logEntry))
   }
 }

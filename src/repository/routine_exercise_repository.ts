@@ -20,7 +20,7 @@ export class RoutineExerciseRepository extends BaseDexieRepository<RoutineExerci
     const data = await this.table
       .where('routine_id').equals(routineId)
       .sortBy('order_index')
-    return data.map(d => this.fromDB(d))
+    return data.map(entry => this.fromDB(entry))
   }
 
   async findByRoutineAndExercise(routineId: number, exerciseId: number): Promise<RoutineExercise | undefined> {

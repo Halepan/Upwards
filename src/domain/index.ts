@@ -8,7 +8,7 @@ export { Habit } from './habit'
 export { HabitLog } from './habit_log'
 export type { HabitStatus } from './habit_log'
 export { Week } from './week'
-export { HabitWeekPlan } from './habit_weeK_plan'
+export { HabitWeekPlan } from './habit_week_plan'
 
 // MÓDULO DE FINANZAS
 export { Account } from './account'

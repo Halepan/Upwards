@@ -18,28 +18,28 @@ export class ExpenseEntryRepository extends BaseDexieRepository<ExpenseEntryData
 
   async findByAccount(account_id: number): Promise<ExpenseEntry[]> {
     const data = await this.table.where('account_id').equals(account_id).toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(entry => this.fromDB(entry))
   }
 
   async findByDateRange(startDate: string, endDate: string): Promise<ExpenseEntry[]> {
     const data = await this.table
-      .filter(e => e.date >= startDate && e.date <= endDate)
+      .filter(entry => entry.date >= startDate && entry.date <= endDate)
       .toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(entry => this.fromDB(entry))
   }
 
   async findByCategory(category: string): Promise<ExpenseEntry[]> {
     const lowerCategory = category.toLowerCase()
     const data = await this.table
-      .filter(e => e.category.toLowerCase().includes(lowerCategory))
+      .filter(entry => entry.category.toLowerCase().includes(lowerCategory))
       .toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(entry => this.fromDB(entry))
   }
 
   async getTotalAmount(account_id?: number): Promise<number> {
     const entries = account_id
       ? await this.findByAccount(account_id)
       : await this.table.toArray()
-    return entries.reduce((sum, e) => sum + e.amount, 0)
+    return entries.reduce((total, entry) => total + entry.amount, 0)
   }
 }

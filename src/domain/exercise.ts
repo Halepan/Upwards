@@ -1,4 +1,5 @@
-//Clase principal que se encarga de registrar el ejercicio con su subtipo y su enfoque
+/* Ejercicio individual: define nombre, tipo (fuerza/resistencia), subtipo muscular
+   y si es personalizado o predefinido. */
 import { BaseEntity } from './base_entity'
 
 export type ExerciseType = 'fuerza' | 'resistencia'
@@ -33,7 +34,6 @@ export class Exercise extends BaseEntity {
     this._isCustom = isCustom
   }
 
-  // Getters
   get userId(): number { return this._userId }
   get name(): string { return this._name }
   get type(): ExerciseType { return this._type }
@@ -41,7 +41,6 @@ export class Exercise extends BaseEntity {
   get description(): string | undefined { return this._description }
   get isCustom(): boolean { return this._isCustom }
 
-  // Setters
   set name(value: string) {
     this._name = value
     this.updateTimestamp()
@@ -59,13 +58,12 @@ export class Exercise extends BaseEntity {
     this.updateTimestamp()
   }
 
-  // Método de negocio: zona muscular trabajada
+  /* Devuelve la zona muscular o tipo de esfuerzo que trabaja el ejercicio. */
   getTargetZone(): string {
     if (this._subType) return this._subType
     return this._type === 'fuerza' ? 'general' : 'cardiovascular'
   }
 
-  // Conversión
   static fromDB(data: any): Exercise {
     return new Exercise(
       data.id,

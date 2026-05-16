@@ -1,13 +1,12 @@
-/*
-Esta clase se encarga de manejar el estado de los habitos por fechas 
-*/
+/* Registro diario del estado de un hábito: completado, perdido o planeado.
+   Encapsula las transiciones de estado como métodos de dominio. */
 import { BaseEntity } from './base_entity'
 
 export type HabitStatus = 'completed' | 'missed' | 'planned'
 
 export class HabitLog extends BaseEntity {
   private _habitId: number
-  private _date: string      // YYYY-MM-DD
+  private _date: string
   private _status: HabitStatus
   private _completedAt?: string
 
@@ -28,25 +27,26 @@ export class HabitLog extends BaseEntity {
     this._completedAt = completedAt
   }
 
-  // Getters
   get habitId(): number { return this._habitId }
   get date(): string { return this._date }
   get status(): HabitStatus { return this._status }
   get completedAt(): string | undefined { return this._completedAt }
 
-  // Métodos de negocio (no setters individuales, sino acciones de dominio)
+  /* Transiciona el registro a completado y registra el timestamp. */
   markCompleted(): void {
     this._status = 'completed'
     this._completedAt = new Date().toISOString()
     this.updateTimestamp()
   }
 
+  /* Transiciona el registro a perdido. */
   markMissed(): void {
     this._status = 'missed'
     this._completedAt = undefined
     this.updateTimestamp()
   }
 
+  /* Reinicia el registro a su estado de planeado inicial. */
   resetToPlanned(): void {
     this._status = 'planned'
     this._completedAt = undefined
@@ -57,7 +57,6 @@ export class HabitLog extends BaseEntity {
     return this._status === 'completed'
   }
 
-  // Conversión
   static fromDB(data: any): HabitLog {
     return new HabitLog(
       data.id,

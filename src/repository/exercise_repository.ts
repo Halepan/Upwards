@@ -19,31 +19,31 @@ export class ExerciseRepository extends BaseDexieRepository<ExerciseData, Exerci
 
   async findByUserId(userId: number): Promise<Exercise[]> {
     const data = await this.table.where('user_id').equals(userId).toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(exerciseData => this.fromDB(exerciseData))
   }
 
   async findByType(userId: number, type: 'fuerza' | 'resistencia'): Promise<Exercise[]> {
     const data = await this.table
       .where('user_id').equals(userId)
-      .filter(e => e.type === type)
+      .filter(exerciseData => exerciseData.type === type)
       .toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(exerciseData => this.fromDB(exerciseData))
   }
 
   async findBySubType(userId: number, subType: ExerciseSubType): Promise<Exercise[]> {
     const data = await this.table
       .where('user_id').equals(userId)
-      .filter(e => e.sub_type === subType)   // snake_case
+      .filter(exerciseData => exerciseData.sub_type === subType)
       .toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(exerciseData => this.fromDB(exerciseData))
   }
 
   async findByName(userId: number, name: string): Promise<Exercise[]> {
     const lowerName = name.toLowerCase()
     const data = await this.table
       .where('user_id').equals(userId)
-      .filter(e => e.name.toLowerCase().includes(lowerName))
+      .filter(exerciseData => exerciseData.name.toLowerCase().includes(lowerName))
       .toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(exerciseData => this.fromDB(exerciseData))
   }
 }

@@ -1,4 +1,5 @@
-//clase encargada de la gestion de las salida de el flujo de efectivo 
+/* Gasto asociado a una cuenta: monto, categoría, fecha y nota opcional.
+   Es la salida del flujo de efectivo. */
 import { BaseEntity } from './base_entity'
 
 export class ExpenseEntry extends BaseEntity {
@@ -6,7 +7,7 @@ export class ExpenseEntry extends BaseEntity {
   private _amount: number
   private _category: string
   private _note?: string
-  private _date: string // YYYY-MM-DD
+  private _date: string
 
   constructor(
     id: number | undefined,
@@ -28,14 +29,12 @@ export class ExpenseEntry extends BaseEntity {
     this._note = note
   }
 
-  // Getters
   get accountId(): number { return this._accountId }
   get amount(): number { return this._amount }
   get category(): string { return this._category }
   get note(): string | undefined { return this._note }
   get date(): string { return this._date }
 
-  // Setters
   set amount(value: number) {
     if (value <= 0) throw new Error('El monto debe ser mayor que cero')
     this._amount = value
@@ -54,7 +53,6 @@ export class ExpenseEntry extends BaseEntity {
     this.updateTimestamp()
   }
 
-  // Conversión
   static fromDB(data: any): ExpenseEntry {
     return new ExpenseEntry(
       data.id,

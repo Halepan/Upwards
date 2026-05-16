@@ -1,5 +1,5 @@
-// Este modulo se encarga de manejar las mediciones genericas del cuerpo 
-//para medir el indice de grasa corporal 
+/* Mediciones corporales del usuario: peso, porcentaje graso, altura y perímetros.
+   Provee cálculos de dominio como IMC y categoría de composición corporal. */
 import { BaseEntity } from './base_entity'
 
 export class BodyMeasurement extends BaseEntity {

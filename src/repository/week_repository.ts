@@ -23,6 +23,6 @@ export class WeekRepository extends BaseDexieRepository<WeekData, Week> {
 
   async findByUserId(userId: number): Promise<Week[]> {
     const data = await this.table.where('user_id').equals(userId).toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(weekData => this.fromDB(weekData))
   }
 }

@@ -1,14 +1,12 @@
-/*
-Esta clase se encarga de enlazar los habitos con las semanas, 
-creando la sincronizacion de un plan bien estructurado
-*/    
-    
+/* Asocia un hábito a una semana específica con los días planeados (ISO: 1=lunes..7=domingo).
+   Permite planificar qué días de la semana se ejecutará cada hábito. */
+
 import { BaseEntity } from './base_entity'
 
 export class HabitWeekPlan extends BaseEntity {
   private _habitId: number
   private _weekId: number
-  private _plannedDays: number[]   // Array de días ISO (1=Lunes..7=Domingo)
+  private _plannedDays: number[]
 
   constructor(
     id: number | undefined,
@@ -25,22 +23,19 @@ export class HabitWeekPlan extends BaseEntity {
     this._plannedDays = plannedDays
   }
 
-  // Getters
   get habitId(): number { return this._habitId }
   get weekId(): number { return this._weekId }
-  get plannedDays(): number[] { return [...this._plannedDays] } // copia defensiva
+  get plannedDays(): number[] { return [...this._plannedDays] }
 
-  // Setters
   set plannedDays(value: number[]) {
-    // Validar que cada día esté entre 1 y 7
-    if (value.some(d => d < 1 || d > 7)) {
+    if (value.some(dayNumber => dayNumber < 1 || dayNumber > 7)) {
       throw new Error('Los días deben estar entre 1 (lunes) y 7 (domingo)')
     }
     this._plannedDays = [...value]
     this.updateTimestamp()
   }
 
-  // Métodos de negocio
+  /* Agrega un día al plan si no está ya incluido, manteniendo orden ascendente. */
   addDay(day: number): void {
     if (day < 1 || day > 7) throw new Error('Día inválido')
     if (!this._plannedDays.includes(day)) {
@@ -50,8 +45,9 @@ export class HabitWeekPlan extends BaseEntity {
     }
   }
 
+  /* Elimina un día del plan. */
   removeDay(day: number): void {
-    this._plannedDays = this._plannedDays.filter(d => d !== day)
+    this._plannedDays = this._plannedDays.filter(plannedDay => plannedDay !== day)
     this.updateTimestamp()
   }
 
@@ -59,7 +55,6 @@ export class HabitWeekPlan extends BaseEntity {
     return this._plannedDays.includes(day)
   }
 
-  // Conversión
   static fromDB(data: any): HabitWeekPlan {
     return new HabitWeekPlan(
       data.id,

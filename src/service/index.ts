@@ -1,4 +1,4 @@
-export type { IConflictResolve } from './iconflict_resolve'
+export type { IConflictResolve } from './iconflict_resolver'
 export { LastWriteWinsResolver } from './last_write_wins_resolver'
 export { HabitService } from './habit_service'
 export type { CreateHabitDTO, WeeklyProgress } from './habit_service'

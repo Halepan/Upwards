@@ -1,7 +1,5 @@
-
-/* Dominio de la clase base-entidad que se centra en tener
-la base solida de todo el sitema estos atributos son inmodificables  
-*/
+/* Entidad base abstracta que define los atributos comunes de toda entidad del sistema.
+   Implementa el principio DRY al centralizar id, uuid y timestamps. */
 export abstract class BaseEntity {
   protected _id?: number
   protected _uuid: string
@@ -31,7 +29,7 @@ export abstract class BaseEntity {
     return this._updatedAt
   }
 
-  // Método para actualizar el timestamp manualmente
+  /* Actualiza el timestamp de modificación. Se invoca desde los setters de cada subclase. */
   public updateTimestamp(): void {
     this._updatedAt = new Date().toISOString()
   }

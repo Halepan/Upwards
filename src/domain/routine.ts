@@ -1,4 +1,5 @@
-// Esta clase se encarga de gestionar la rutina completa es decir no solo un ejercico
+/* Agrupa un conjunto de ejercicios en una rutina. Puede activarse/desactivarse
+   para controlar qué rutinas están disponibles en el día a día. */
 import { BaseEntity } from './base_entity'
 
 export class Routine extends BaseEntity {
@@ -24,13 +25,11 @@ export class Routine extends BaseEntity {
     this._isActive = isActive
   }
 
-  // Getters
   get userId(): number { return this._userId }
   get name(): string { return this._name }
   get description(): string | undefined { return this._description }
   get isActive(): boolean { return this._isActive }
 
-  // Setters
   set name(value: string) {
     this._name = value
     this.updateTimestamp()
@@ -40,7 +39,6 @@ export class Routine extends BaseEntity {
     this.updateTimestamp()
   }
 
-  // Métodos de negocio
   activate(): void {
     this._isActive = true
     this.updateTimestamp()
@@ -51,7 +49,6 @@ export class Routine extends BaseEntity {
     this.updateTimestamp()
   }
 
-  // Conversión
   static fromDB(data: any): Routine {
     return new Routine(
       data.id,

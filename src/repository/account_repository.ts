@@ -18,28 +18,28 @@ export class AccountRepository extends BaseDexieRepository<AccountData, Account>
 
   async findByUserId(user_id: number): Promise<Account[]> {
     const data = await this.table.where('user_id').equals(user_id).toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(account => this.fromDB(account))
   }
 
   async findByType(user_id: number, type: AccountData['type']): Promise<Account[]> {
     const data = await this.table
       .where('user_id').equals(user_id)
-      .filter(a => a.type === type)
+      .filter(account => account.type === type)
       .toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(account => this.fromDB(account))
   }
 
   async findByName(user_id: number, name: string): Promise<Account[]> {
     const lowerName = name.toLowerCase()
     const data = await this.table
       .where('user_id').equals(user_id)
-      .filter(a => a.name.toLowerCase().includes(lowerName))
+      .filter(account => account.name.toLowerCase().includes(lowerName))
       .toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(account => this.fromDB(account))
   }
 
   async getTotalBalance(user_id: number): Promise<number> {
     const accounts = await this.findByUserId(user_id)
-    return accounts.reduce((sum, a) => sum + a.balance, 0)
+    return accounts.reduce((total, account) => total + account.balance, 0)
   }
 }

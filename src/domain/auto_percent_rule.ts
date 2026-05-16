@@ -1,3 +1,5 @@
+/* Regla de asignación automática: al registrar un ingreso, un porcentaje se deriva
+   automáticamente a una cuenta destino (ej: 10% a ahorros). */
 import { BaseEntity } from './base_entity'
 
 export class AutoPercentRule extends BaseEntity {
@@ -23,12 +25,10 @@ export class AutoPercentRule extends BaseEntity {
     this._isActive = isActive
   }
 
-  // Getters
   get targetAccountId(): number { return this._targetAccountId }
   get percentage(): number { return this._percentage }
   get isActive(): boolean { return this._isActive }
 
-  // Setters
   set percentage(value: number) {
     if (value < 0 || value > 100) throw new Error('El porcentaje debe estar entre 0 y 100')
     this._percentage = value
@@ -39,13 +39,12 @@ export class AutoPercentRule extends BaseEntity {
     this.updateTimestamp()
   }
 
-  // Método de negocio
+  /* Calcula el monto a derivar según el porcentaje configurado. Retorna 0 si está inactiva. */
   apply(amount: number): number {
     if (!this._isActive) return 0
     return (amount * this._percentage) / 100
   }
 
-  // Conversión
   static fromDB(data: any): AutoPercentRule {
     return new AutoPercentRule(
       data.id,

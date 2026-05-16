@@ -26,11 +26,11 @@ export class HabitLogRepository extends BaseDexieRepository<HabitLogData, HabitL
       .where('habit_id').equals(habitId)
       .filter(log => log.date >= startDate && log.date <= endDate)
       .toArray()
-    return data.map(d => this.fromDB(d))
+    return data.map(entry => this.fromDB(entry))
   }
 
   async getCompletedCountForWeek(habitId: number, startDate: string, endDate: string): Promise<number> {
     const logs = await this.findByHabitInRange(habitId, startDate, endDate)
-    return logs.filter(l => l.status === 'completed').length
+    return logs.filter(log => log.status === 'completed').length
   }
 }

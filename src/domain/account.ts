@@ -1,7 +1,5 @@
-/*
-La base del modulo para las finanzas es la gestion de cuentas y
-esta clase de encarga de su creacion es decir seria la mismisima cuenta en si 
-*/
+/* Representa una cuenta financiera del usuario: gasto, ahorro, inversión o donación.
+   Maneja el balance mediante depósitos y retiros con validación de fondos. */
 
 import { BaseEntity } from './base_entity'
 
@@ -30,13 +28,11 @@ export class Account extends BaseEntity {
     this._balance = balance
   }
 
-  // Getters
   get userId(): number { return this._userId }
   get name(): string { return this._name }
   get type(): AccountType { return this._type }
   get balance(): number { return this._balance }
 
-  // Setters
   set name(value: string) {
     this._name = value
     this.updateTimestamp()
@@ -46,13 +42,14 @@ export class Account extends BaseEntity {
     this.updateTimestamp()
   }
 
-  // Métodos de negocio
+  /* Incrementa el balance validando que el monto sea positivo. */
   deposit(amount: number): void {
     if (amount <= 0) throw new Error('El depósito debe ser mayor que cero')
     this._balance += amount
     this.updateTimestamp()
   }
 
+  /* Decrementa el balance validando fondos suficientes. */
   withdraw(amount: number): void {
     if (amount <= 0) throw new Error('El retiro debe ser mayor que cero')
     if (amount > this._balance) throw new Error('Fondos insuficientes')
@@ -60,7 +57,6 @@ export class Account extends BaseEntity {
     this.updateTimestamp()
   }
 
-  // Conversión
   static fromDB(data: any): Account {
     return new Account(
       data.id,
