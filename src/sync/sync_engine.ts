@@ -6,7 +6,9 @@ import { LastWriteWinsResolver } from '../service/last_write_wins_resolver'
 
 const MAX_SYNC_ATTEMPTS = 5
 
-/* Mapea nombres de tablas locales a tablas en Supabase. */
+/* Mapea nombres de tablas locales a tablas en Supabase.
+   Solo incluye tablas de dominio con user_id para sincronización bidireccional.
+   sync_queue y sync_metadata son exclusivamente locales y NO deben estar aquí. */
 const TABLE_MAPPING: Record<string, string> = {
   users: 'users',
   accounts: 'accounts',
@@ -105,11 +107,16 @@ export class SyncEngine implements ISyncEngine {
     }
   }
 
-  /* Marca un registro local como en conflicto tras exceder intentos de sync. */
+  /* Marca un registro local como en conflicto tras exceder intentos de sync.
+     Si la tabla no existe o no tiene update, advierte por consola. */
   private async markAsConflict(entry: SyncQueueEntry): Promise<void> {
     const table = db[entry.table_name as keyof typeof db] as any
     if (table?.update) {
       await table.update(entry.record_id, { sync_status: 'conflict' })
+    } else {
+      console.warn(
+        `[SyncEngine] No se pudo marcar conflicto en ${entry.table_name}#${entry.record_id}: tabla sin método update`
+      )
     }
   }
 
