@@ -21,3 +21,6 @@ export { AccountRepository } from './account_repository'
 export { IncomeEntryRepository } from './income_entry_repository'
 export { ExpenseEntryRepository } from './expense_entry_repository'
 export { AutoPercentRuleRepository } from './auto_percent_rule_repository'
+
+// Usuario
+export { UserRepository } from './user_repository'
