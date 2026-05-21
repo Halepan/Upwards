@@ -141,7 +141,8 @@ function switchToLogin(): void {
 
 .app-name {
   margin: 0;
-  font-size: 36px;
+  font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+  font-size: 40px;
   font-weight: 700;
   color: var(--color-text);
   letter-spacing: 1px;
@@ -153,8 +154,8 @@ function switchToLogin(): void {
 
 .app-name .logo-u {
   color: #00897b; /* modo claro */
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
   margin-right: 1px;
 }
@@ -165,7 +166,8 @@ function switchToLogin(): void {
 
 .tagline {
   margin: 6px 0 0;
-  font-size: 18px;
+  font-size: 14px;
+  font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
   font-weight: 400;
   color: var(--color-text-secondary);
   opacity: 0.8;

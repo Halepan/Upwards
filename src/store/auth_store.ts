@@ -148,6 +148,22 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
   }
 
+  function devBypassLogin(): void {
+    const now = new Date().toISOString()
+    currentUser.value = new User(
+      0, uuidv4(), now, now,
+      'Dev', 'dev@upwards.app', 'email', undefined
+    )
+    isAuthenticated.value = true
+    isLoading.value = false
+    error.value = null
+    console.log('[Auth] Dev bypass — login automático activado')
+  }
+
+  if (import.meta.env.DEV) {
+    devBypassLogin()
+  }
+
   return {
     currentUser,
     isAuthenticated,
