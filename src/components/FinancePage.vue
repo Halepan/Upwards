@@ -4,6 +4,7 @@ import { useLongPress } from '../composables/useLongPress'
 import ContextMenu from './ContextMenu.vue'
 import FloatingActionButton from './FloatingActionButton.vue'
 import SlidePanel from './SlidePanel.vue'
+import FinanceChart from './FinanceChart.vue'
 import type { FabAction } from './FloatingActionButton.vue'
 
 type Trend = 'up' | 'down' | 'flat'
@@ -124,7 +125,7 @@ const categories = ref([
   { label: 'Otros', value: 10, color: '#bdbdbd' },
 ])
 
-const viewMode = ref<'semanal' | 'mensual' | 'anual'>('mensual')
+const viewMode = ref<'diario' | 'semanal' | 'mensual'>('diario')
 
 const circumference = 2 * Math.PI * 40
 
@@ -140,103 +141,7 @@ const segments = computed(() => {
   })
 })
 
-/* Datos base mensuales para cada cuenta (12 meses → anual) */
-const monthlyBase: Record<string, number[]> = {
-  'Gasto diario':  [1200, 1350, 1400, 1500, 1600, 1700, 1750, 1800, 1900, 2000, 2100, 2200, 2300, 2400, 2500, 2600, 2700, 2750, 2800, 2850, 2900, 3000, 3100, 3150, 2900, 3000, 3100, 3200],
-  'Ahorro':       [15000,15200,15400,15600,15800,16000,15800,16000,16200,16400,16600,16800,17000,17200,17400,17600,17800,18000,18200,18400,18300,18400,18450,18500,18500,18500,18500,18500],
-  'Inversión':    [38000,38500,39000,39500,39800,40000,40500,41000,41500,42000,42500,43000,43500,44000,44300,44500,44800,45000,45100,45200,45250,45300,45300,45300,45300,45300,45300,45300],
-  'Donación':     [700,  730,  750,  780,  800,  820,  840,  860,  880,  900,  930,  950,  980,  1000, 1030, 1050, 1080, 1100, 1120, 1140, 1150, 1170, 1190, 1200, 1200, 1200, 1200, 1200],
-  'Vivienda':     [3800, 3900, 4000, 4100, 4200, 4300, 4400, 4500, 4600, 4700, 4800, 4900, 5000, 5100, 5200, 5300, 5400, 5500, 5600, 5700, 5750, 5800, 5750, 5700, 5650, 5700, 5750, 5800],
-  'Transporte':   [500,  520,  540,  560,  580,  600,  620,  640,  660,  680,  700,  720,  740,  760,  780,  800,  820,  840,  860,  880,  900,  920,  940,  960,  930,  940,  950,  950],
-  'Salud':        [2000, 2100, 2200, 2250, 2300, 2350, 2400, 2450, 2500, 2600, 2700, 2800, 2900, 3000, 3100, 3150, 3200, 3250, 3300, 3350, 3380, 3400, 3450, 3420, 3400, 3400, 3400, 3400],
-  'Educación':    [8000, 8200, 8400, 8600, 8800, 9000, 9200, 9400, 9600, 9800, 10000,10200,10400,10600,10800,11000,11200,11400,11600,11800,11900,12000,11950,11900,11900,12000,12000,12000],
-  'Vacaciones':   [6000, 6100, 6200, 6300, 6400, 6500, 6600, 6700, 6800, 6900, 7000, 7100, 7200, 7300, 7400, 7500, 7600, 7700, 7750, 7780, 7790, 7800, 7820, 7830, 7810, 7800, 7800, 7800],
-  'Emergencia':   [10000,10200,10500,10700,11000,11200,11500,11700,12000,12200,12500,12800,13000,13200,13500,13700,14000,14200,14400,14600,14800,14900,15000,15000,15000,15000,15000,15000],
-}
 
-/* Nombres de los meses en español */
-const monthNames = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
-const accountNames = accounts.value.map(a => a.name)
-
-/* Generar chartData según el modo */
-const chartData = computed<{ label: string; values: number[] }[]>(() => {
-  if (viewMode.value === 'anual') {
-    return [2023, 2024, 2025].map((year, yi) => {
-      const idx = yi === 0 ? 11 : yi === 1 ? 23 : 27
-      return {
-        label: `${year}`,
-        values: accountNames.map(n => monthlyBase[n][idx]),
-      }
-    })
-  }
-
-  if (viewMode.value === 'mensual') {
-    /* Últimos 4 meses: ene 2025, feb 2025, mar 2025, abr 2025 */
-    const months = [
-      { label: 'ene 2025', idx: 24 },
-      { label: 'feb 2025', idx: 25 },
-      { label: 'mar 2025', idx: 26 },
-      { label: 'abr 2025', idx: 27 },
-    ]
-    return months.map(m => ({
-      label: m.label,
-      values: accountNames.map(n => monthlyBase[n][m.idx]),
-    }))
-  }
-
-  /* semanal: 7 días de la última semana de abr 2025 */
-  const dailyLabels = ['lun 28', 'mar 29', 'mié 30', 'jue 1', 'vie 2', 'sáb 3', 'dom 4']
-  const prevVal = accountNames.map(n => monthlyBase[n][26]) /* mar 2025 */
-  const curVal = accountNames.map(n => monthlyBase[n][27])  /* abr 2025 */
-  const diffs = curVal.map((v, i) => (v - prevVal[i]) / 7)
-
-  return dailyLabels.map((label, di) => ({
-    label,
-    values: prevVal.map((b, i) => Math.round(b + diffs[i] * (di + 1))),
-  }))
-})
-
-const yMax = computed(() => {
-  let max = 0
-  for (const dp of chartData.value) {
-    for (const v of dp.values) {
-      if (v > max) max = v
-    }
-  }
-  return Math.ceil(max / 1000) * 1000 || 1000
-})
-
-const chartW = computed(() => Math.max(200, chartData.value.length * 80))
-const chartH = computed(() => 180)
-const pad = { top: 20, right: 16, bottom: 36, left: 52 }
-
-const plotW = computed(() => chartW.value - pad.left - pad.right)
-const plotH = computed(() => chartH.value - pad.top - pad.bottom)
-
-function xPos(i: number): number {
-  return pad.left + (i / Math.max(1, chartData.value.length - 1)) * plotW.value
-}
-
-function yPos(v: number): number {
-  return pad.top + plotH.value - (v / yMax.value) * plotH.value
-}
-
-const yTicks = computed(() => {
-  const steps = 4
-  const step = yMax.value / steps
-  const ticks: { label: string; y: number }[] = []
-  for (let i = 0; i <= steps; i++) {
-    ticks.push({ label: `$${(step * i).toLocaleString()}`, y: yPos(step * i) })
-  }
-  return ticks
-})
-
-const dotSeries = computed(() => {
-  return accounts.value.map((acct, ai) => {
-    const pts = chartData.value.map((dp, i) => `${xPos(i)},${yPos(dp.values[ai])}`).join(' ')
-    return { id: acct.id, color: acct.color, points: pts }
-  })
-})
 
 const {
   contextVisible, contextItems, contextX, contextY,
@@ -291,15 +196,17 @@ function formatCurrency(n: number): string {
           @touchend="cancelPress"
           @touchmove="cancelPress"
         >
-          <span class="trend-indicator" :class="acct.trend">
-            <span v-if="acct.trend === 'up'">▲</span>
-            <span v-else-if="acct.trend === 'down'">▼</span>
-            <span v-else>—</span>
-          </span>
           <div class="acct-info">
             <span class="acct-name">{{ acct.name }}</span>
           </div>
-          <span class="acct-balance">{{ formatCurrency(acct.balance) }}</span>
+          <div class="acct-balance-row">
+            <span class="trend-indicator" :class="acct.trend">
+              <span v-if="acct.trend === 'up'">▲</span>
+              <span v-else-if="acct.trend === 'down'">▼</span>
+              <span v-else>—</span>
+            </span>
+            <span class="acct-balance">{{ formatCurrency(acct.balance) }}</span>
+          </div>
         </div>
       </div>
 
@@ -345,65 +252,18 @@ function formatCurrency(n: number): string {
           </div>
         </div>
 
-        <div class="dot-chart-block">
-          <div class="dot-scroll-wrap">
-            <svg :viewBox="`0 0 ${chartW} ${chartH}`" class="dot-svg" :style="{ width: chartW + 'px', minWidth: chartW + 'px' }">
-              <defs>
-                <pattern id="grid-small" width="20" height="20" patternUnits="userSpaceOnUse">
-                  <path d="M 20 0 L 0 0 0 20" fill="none" stroke="var(--color-border)" stroke-width="0.3" opacity="0.4" />
-                </pattern>
-                <pattern id="grid-large" width="80" height="40" patternUnits="userSpaceOnUse">
-                  <rect width="80" height="40" fill="url(#grid-small)" />
-                  <path d="M 80 0 L 0 0 0 40" fill="none" stroke="var(--color-border)" stroke-width="0.6" opacity="0.6" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#grid-large)" />
-              <line v-for="tick in yTicks" :key="tick.label" x1="0" :y1="tick.y" :x2="chartW" :y2="tick.y" stroke="var(--color-text-secondary)" stroke-width="0.4" stroke-dasharray="2,3" opacity="0.5" />
-              <line v-for="(dp, i) in chartData" :key="'vline-'+i" :x1="xPos(i)" :y1="pad.top" :x2="xPos(i)" :y2="chartH - pad.bottom" stroke="var(--color-text-secondary)" stroke-width="0.4" stroke-dasharray="2,3" opacity="0.5" />
-              <text v-for="tick in yTicks" :key="tick.label" x="4" :y="tick.y + 3" fill="var(--color-text-secondary)" font-size="8" text-anchor="start">{{ tick.label }}</text>
-              <text v-for="(dp, i) in chartData" :key="dp.label" :x="xPos(i)" :y="chartH - 4" fill="var(--color-text-secondary)" font-size="8" text-anchor="middle">{{ dp.label }}</text>
-              <polyline
-                v-for="serie in dotSeries"
-                :key="serie.id"
-                :points="serie.points"
-                :stroke="serie.color"
-                stroke-width="1.8"
-                fill="none"
-                stroke-linejoin="round"
-                stroke-linecap="round"
-              />
-              <template v-for="(dp, mi) in chartData" :key="'dots-' + mi">
-                <circle
-                  v-for="(acct, ai) in accounts"
-                  :key="`${mi}-${ai}`"
-                  :cx="xPos(mi)"
-                  :cy="yPos(dp.values[ai])"
-                  :fill="acct.color"
-                  r="3"
-                  stroke="#fff"
-                  stroke-width="1"
-                />
-              </template>
-            </svg>
-          </div>
-          <div class="dot-legend">
-            <div v-for="acct in accounts" :key="acct.id" class="legend-item">
-              <span class="legend-dot" :style="{ background: acct.color }" />
-              <span class="legend-label">{{ acct.name }}</span>
-            </div>
-          </div>
-        </div>
+        <FinanceChart v-model:view-mode="viewMode" />
       </div>
 
       <div class="view-toggle">
         <button
-          v-for="mode in (['semanal', 'mensual', 'anual'] as const)"
+          v-for="mode in (['diario', 'semanal', 'mensual'] as const)"
           :key="mode"
           class="toggle-btn"
           :class="{ active: viewMode === mode }"
           @click="viewMode = mode"
         >
-          {{ mode.charAt(0).toUpperCase() + mode.slice(1) }}
+          {{ mode === 'diario' ? 'Diario' : mode.charAt(0).toUpperCase() + mode.slice(1) }}
         </button>
       </div>
     </section>
@@ -548,17 +408,20 @@ function formatCurrency(n: number): string {
   box-shadow: var(--shadow-md);
 }
 
+.acct-balance-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .trend-indicator {
-  position: absolute;
-  left: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 26px;
+  font-size: 20px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
+  width: 20px;
+  flex-shrink: 0;
 }
 
 .trend-indicator.up {
@@ -740,57 +603,6 @@ function formatCurrency(n: number): string {
   color: var(--color-text-secondary);
 }
 
-.dot-chart-block {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-}
-
-.dot-scroll-wrap {
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-sm);
-  padding: 8px;
-}
-
-.dot-scroll-wrap::-webkit-scrollbar {
-  height: 4px;
-}
-.dot-scroll-wrap::-webkit-scrollbar-track {
-  background: var(--color-border);
-  border-radius: 2px;
-}
-.dot-scroll-wrap::-webkit-scrollbar-thumb {
-  background: var(--color-primary);
-  border-radius: 2px;
-}
-
-.dot-svg {
-  height: 180px;
-  display: block;
-}
-
-.dot-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.dot-legend .legend-item {
-  gap: 3px;
-  padding: 2px 6px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-}
-
-.dot-legend .legend-label {
-  font-size: 9px;
-}
-
 .view-toggle {
   display: flex;
   gap: 8px;
@@ -970,9 +782,7 @@ function formatCurrency(n: number): string {
     justify-content: center;
   }
   .trend-indicator {
-    left: 10px;
-    font-size: 20px;
-    width: 20px;
+    font-size: 18px;
   }
 }
 

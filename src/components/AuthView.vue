@@ -9,8 +9,12 @@ import ConnectionIndicator from './ConnectionIndicator.vue'
 import LoginPanel from './LoginPanel.vue'
 import RegisterPanel from './RegisterPanel.vue'
 import { useLanguage } from '../composables/useLanguage'
+import { useTheme } from '../composables/useTheme'
+import logoLight from '../assets/ulightvector.svg'
+import logoDark from '../assets/udarkvector.svg'
 
 const { lang } = useLanguage()
+const { isDark } = useTheme()
 
 const panel = ref<'login' | 'register'>('login')
 const transitionDirection = ref<'left' | 'right'>('left')
@@ -37,43 +41,11 @@ function switchToLogin(): void {
     <div class="auth-container">
       <div class="auth-header">
         <h1 class="app-name">
-          <svg
-            class="logo-u"
-            width="36"
-            height="36"
-            viewBox="0 0 80 80"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            aria-hidden="true"
-          >
-            <path
-              class="logo-u-shape"
-              d="M16 16V48C16 56.8366 23.1634 64 32 64H48C56.8366 64 64 56.8366 64 48V16"
-              stroke="currentColor"
-              stroke-width="7"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              fill="none"
-            />
-            <path
-              class="logo-arrow"
-              d="M52 28L64 16L76 28"
-              stroke="currentColor"
-              stroke-width="7"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              fill="none"
-            />
-            <line
-              x1="64"
-              y1="16"
-              x2="64"
-              y2="46"
-              stroke="currentColor"
-              stroke-width="7"
-              stroke-linecap="round"
-            />
-          </svg>
+          <img
+            :src="isDark ? logoDark : logoLight"
+            alt="U"
+            class="logo-u-img"
+          />
           PWARDS
         </h1>
         <p class="tagline">Crece cada día</p>
@@ -152,16 +124,12 @@ function switchToLogin(): void {
   gap: 0;
 }
 
-.app-name .logo-u {
-  color: #00897b; /* modo claro */
+.logo-u-img {
   width: 40px;
   height: 40px;
   flex-shrink: 0;
-  margin-right: 1px;
-}
-
-:root.dark .app-name .logo-u {
-  color: #ffd700; /* modo oscuro */
+  margin-right: 2px;
+  object-fit: contain;
 }
 
 .tagline {

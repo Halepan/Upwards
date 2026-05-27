@@ -15,18 +15,8 @@ const historyPanelOpen = ref(false)
 
 <template>
   <AuthView v-if="!auth.isAuthenticated" />
-  <AppShell
-    v-else
-    :section="currentSection"
-    :user-name="auth.currentUser?.name ?? 'U'"
-    @update:section="currentSection = $event"
-    @open-history="historyPanelOpen = true"
-  >
-    <FinancePage
-      v-if="currentSection === 'finanzas'"
-      :history-open="historyPanelOpen"
-      @close-history="historyPanelOpen = false"
-    />
+  <AppShell v-else v-model:section="currentSection" :user-name="auth.currentUser?.name ?? ''" @open-history="historyPanelOpen = true">
+    <FinancePage v-if="currentSection === 'finanzas'" :history-open="historyPanelOpen" @close-history="historyPanelOpen = false" />
     <HabitsPage v-else-if="currentSection === 'habitos'" />
     <FitnessPage v-else-if="currentSection === 'fitness'" />
   </AppShell>
