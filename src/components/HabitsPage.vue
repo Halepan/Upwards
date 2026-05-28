@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useLongPress } from '../composables/useLongPress'
 import ContextMenu from './ContextMenu.vue'
 import FloatingActionButton from './FloatingActionButton.vue'
@@ -19,6 +19,11 @@ interface Habit {
   logs: HabitLog[]
 }
 
+// Datos históricos desde 2025 (mejor rendimiento)
+const DATA_START = new Date(2025, 0, 1)      // 1 de enero de 2025
+const today = new Date()
+const todayStr = today.toISOString().slice(0, 10)
+
 function seededRand(seed: number) {
   let s = seed
   return () => {
@@ -27,15 +32,11 @@ function seededRand(seed: number) {
   }
 }
 
-function generateLogs(seed: number, rate: number): HabitLog[] {
+function generateLogs(seed: number, rate: number, startDate: Date = DATA_START, endDate: Date = today): HabitLog[] {
   const rand = seededRand(seed)
   const logs: HabitLog[] = []
-  const end = new Date()
-  const start = new Date(end)
-  start.setMonth(start.getMonth() - 4)
-  start.setDate(1)
-  const cur = new Date(start)
-  while (cur <= end) {
+  const cur = new Date(startDate)
+  while (cur <= endDate) {
     const date = cur.toISOString().slice(0, 10)
     logs.push({ date, done: rand() < rate })
     cur.setDate(cur.getDate() + 1)
@@ -43,6 +44,7 @@ function generateLogs(seed: number, rate: number): HabitLog[] {
   return logs
 }
 
+// Hábitos con logs desde 2025 hasta hoy
 const habits = ref<Habit[]>([
   { id: 1, name: 'Leer 30 min', icon: '📖', frequencyGoal: 5, logs: generateLogs(42, 0.65) },
   { id: 2, name: 'Meditar', icon: '🧘', frequencyGoal: 7, logs: generateLogs(123, 0.75) },
@@ -52,10 +54,16 @@ const habits = ref<Habit[]>([
   { id: 6, name: 'Inglés 20 min', icon: '🌎', frequencyGoal: 5, logs: generateLogs(234, 0.6) },
   { id: 7, name: 'Sin azúcar', icon: '🚫', frequencyGoal: 7, logs: generateLogs(567, 0.8) },
   { id: 8, name: 'Estiramientos', icon: '🤸', frequencyGoal: 6, logs: generateLogs(890, 0.55) },
+  { id: 9, name: 'Dormir 8h', icon: '😴', frequencyGoal: 7, logs: generateLogs(111, 0.85) },
+  { id: 10, name: 'Caminar 10k', icon: '🚶', frequencyGoal: 5, logs: generateLogs(222, 0.45) },
+  { id: 11, name: 'Desayunar fruta', icon: '🍎', frequencyGoal: 7, logs: generateLogs(333, 0.7) },
+  { id: 12, name: 'No fumar', icon: '🚭', frequencyGoal: 7, logs: generateLogs(444, 0.9) },
+  { id: 13, name: 'No fumar', icon: '🚭', frequencyGoal: 7, logs: generateLogs(444, 0.9) },
+  { id: 14, name: 'No fumar', icon: '🚭', frequencyGoal: 7, logs: generateLogs(444, 0.9) },
+  { id: 15, name: 'No fumar', icon: '🚭', frequencyGoal: 7, logs: generateLogs(444, 0.9) },
+  { id: 16, name: 'No fumar', icon: '🚭', frequencyGoal: 7, logs: generateLogs(444, 0.9) },
+  { id: 17, name: 'No fumar', icon: '🚭', frequencyGoal: 7, logs: generateLogs(444, 0.9) },
 ])
-
-const today = new Date()
-const todayStr = today.toISOString().slice(0, 10)
 
 const todayHabits = computed(() =>
   habits.value.map(h => {
@@ -95,12 +103,13 @@ function fmt(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+// Roadmap desde 2025 hasta hoy
 const roadmapColumns = computed<RoadmapCol[]>(() => {
   const cols: RoadmapCol[] = []
   if (viewMode.value === 'diario') {
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(today)
-      d.setDate(d.getDate() - i)
+    const cur = new Date(DATA_START)
+    while (cur <= today) {
+      const d = new Date(cur)
       cols.push({
         key: fmt(d),
         date: d,
@@ -113,11 +122,14 @@ const roadmapColumns = computed<RoadmapCol[]>(() => {
           return log?.done ? 1 : 0
         },
       })
+      cur.setDate(cur.getDate() + 1)
     }
   } else if (viewMode.value === 'semanal') {
-    for (let w = 11; w >= 0; w--) {
-      const mon = new Date(today)
-      mon.setDate(today.getDate() - today.getDay() - w * 7 + 1)
+    const start = new Date(DATA_START)
+    start.setDate(start.getDate() - start.getDay() + 1)  // lunes
+    const cur = new Date(start)
+    while (cur <= today) {
+      const mon = new Date(cur)
       const sun = new Date(mon)
       sun.setDate(mon.getDate() + 6)
       cols.push({
@@ -129,19 +141,23 @@ const roadmapColumns = computed<RoadmapCol[]>(() => {
         monthYear: `${monthNames[mon.getMonth()]} ${mon.getFullYear()}`,
         score: (h: Habit) => {
           let done = 0, total = 0
-          const cur = new Date(mon)
-          while (cur <= sun) {
-            const log = h.logs.find(l => l.date === fmt(cur))
+          const d = new Date(mon)
+          while (d <= sun) {
+            const log = h.logs.find(l => l.date === fmt(d))
             if (log) { total++; if (log.done) done++ }
-            cur.setDate(cur.getDate() + 1)
+            d.setDate(d.getDate() + 1)
           }
           return total > 0 ? done / total : 0
         },
       })
+      cur.setDate(cur.getDate() + 7)
     }
-  } else {
-    for (let m = 11; m >= 0; m--) {
-      const d = new Date(today.getFullYear(), today.getMonth() - m, 1)
+  } else { // mensual
+    const start = new Date(DATA_START.getFullYear(), DATA_START.getMonth(), 1)
+    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+    const cur = new Date(start)
+    while (cur <= end) {
+      const d = new Date(cur)
       const y = d.getFullYear()
       const mm = d.getMonth()
       cols.push({
@@ -163,46 +179,10 @@ const roadmapColumns = computed<RoadmapCol[]>(() => {
           return total > 0 ? done / total : 0
         },
       })
+      cur.setMonth(cur.getMonth() + 1)
     }
   }
   return cols
-})
-
-const scrollLeft = ref(0)
-const roadmapBodyRef = ref<HTMLDivElement | null>(null)
-const listScrollRef = ref<HTMLDivElement | null>(null)
-const gridScrollRef = ref<HTMLDivElement | null>(null)
-let syncing = false
-
-function onListScroll(e: Event) {
-  if (syncing) return
-  const el = e.target as HTMLElement
-  if (gridScrollRef.value) {
-    syncing = true
-    gridScrollRef.value.scrollTop = el.scrollTop
-    syncing = false
-  }
-}
-
-function onGridScroll(e: Event) {
-  const el = e.target as HTMLElement
-  scrollLeft.value = el.scrollLeft
-  if (syncing) return
-  if (listScrollRef.value) {
-    syncing = true
-    listScrollRef.value.scrollTop = el.scrollTop
-    syncing = false
-  }
-}
-
-const dynamicTitle = computed(() => {
-  if (roadmapColumns.value.length === 0) return ''
-  const colW = 26
-  const idx = Math.max(0, Math.min(
-    Math.floor(scrollLeft.value / colW),
-    roadmapColumns.value.length - 1
-  ))
-  return roadmapColumns.value[idx].monthYear
 })
 
 function cellClass(score: number): string {
@@ -255,6 +235,54 @@ function toggleToday(habitId: number): void {
     h.logs.push({ date: todayStr, done: true })
   }
 }
+
+// Refs para sincronización
+const datesScrollRef = ref<HTMLDivElement | null>(null)
+const listScrollRef = ref<HTMLDivElement | null>(null)
+const gridScrollRef = ref<HTMLDivElement | null>(null)
+
+let syncingVert = false
+function syncVerticalScroll() {
+  if (syncingVert) return
+  syncingVert = true
+  if (listScrollRef.value && gridScrollRef.value) {
+    gridScrollRef.value.scrollTop = listScrollRef.value.scrollTop
+  }
+  syncingVert = false
+}
+
+let syncingHoriz = false
+function syncHorizontalScroll(source: 'dates' | 'grid') {
+  if (syncingHoriz) return
+  syncingHoriz = true
+  if (source === 'grid' && datesScrollRef.value && gridScrollRef.value) {
+    datesScrollRef.value.scrollLeft = gridScrollRef.value.scrollLeft
+  } else if (source === 'dates' && gridScrollRef.value && datesScrollRef.value) {
+    gridScrollRef.value.scrollLeft = datesScrollRef.value.scrollLeft
+  }
+  syncingHoriz = false
+}
+
+// Al montar y al cambiar de vista, ir al final (fecha de hoy)
+onMounted(async () => {
+  await nextTick()
+  if (datesScrollRef.value) {
+    datesScrollRef.value.scrollLeft = datesScrollRef.value.scrollWidth
+  }
+  if (gridScrollRef.value) {
+    gridScrollRef.value.scrollLeft = gridScrollRef.value.scrollWidth
+  }
+})
+
+watch(viewMode, async () => {
+  await nextTick()
+  if (datesScrollRef.value) {
+    datesScrollRef.value.scrollLeft = datesScrollRef.value.scrollWidth
+  }
+  if (gridScrollRef.value) {
+    gridScrollRef.value.scrollLeft = gridScrollRef.value.scrollWidth
+  }
+})
 </script>
 
 <template>
@@ -264,13 +292,14 @@ function toggleToday(habitId: number): void {
         <span class="progress-title"><br>Cumplidos hoy<br></span>
         <div class="donut-wrapper">
           <svg viewBox="0 0 64 64" class="donut-svg">
+            <circle cx="32" cy="32" r="28" fill="white-space" class="donut-bg" stroke-width="6" />
             <circle
               cx="32" cy="32" r="28"
-              fill="none"
+              fill= "none"
               class="donut-fg"
               stroke-width="6"
               :stroke-dasharray="`${donutRatio * 176} 176`"
-              stroke-linecap="butt"
+              stroke-linecap="round"
               transform="rotate(-90 32 32)"
             />
           </svg>
@@ -290,36 +319,54 @@ function toggleToday(habitId: number): void {
     <div class="bottom-section">
       <div class="left-panel">
         <div class="roadmap-container">
-          <div class="dynamic-month">{{ dynamicTitle }}</div>
-          <div class="roadmap-scroll-area" ref="roadmapBodyRef">
-            <div class="rm-top-header">
-              <div class="rm-th-spacer">Hábito</div>
-              <div class="rm-th-grid">
-                <div v-for="col in roadmapColumns" :key="col.key" class="rm-th-cell">
-                  <span class="rm-th-top">{{ col.top }}</span>
-                  <span class="rm-th-bot">{{ col.bot }}</span>
-                </div>
+          <!-- Cabecera de fechas (scroll horizontal sincronizado) -->
+          <div class="dates-header">
+            <div class="spacer-cell">Hábito</div>
+            <div
+              class="date-cells-wrapper"
+              ref="datesScrollRef"
+              @scroll="syncHorizontalScroll('dates')"
+            >
+              <div
+                v-for="col in roadmapColumns"
+                :key="col.key"
+                class="date-cell"
+              >
+                <span class="date-cell-top">{{ col.top }}</span>
+                <span class="date-cell-bot">{{ col.bot }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cuerpo: lista de hábitos + roadmap con scroll vertical sincronizado -->
+          <div class="roadmap-body">
+            <div
+              class="habit-names-column"
+              ref="listScrollRef"
+              @scroll="syncVerticalScroll()"
+            >
+              <div
+                v-for="habit in habits"
+                :key="habit.id"
+                class="habit-name-row"
+                @mousedown="onLongPressHabit(habit, $event)"
+                @touchstart="onLongPressHabit(habit, $event)"
+                @mouseup="cancelPress"
+                @mouseleave="cancelPress"
+                @touchend="cancelPress"
+                @touchmove="cancelPress"
+              >
+                <span class="rm-ni-icon">{{ habit.icon }}</span>
+                <span class="rm-ni-name">{{ habit.name }}</span>
               </div>
             </div>
 
-            <div class="rm-body-wrap">
-              <div class="rm-name-list" ref="listScrollRef" @scroll="onListScroll">
-                <div
-                  v-for="habit in habits"
-                  :key="habit.id"
-                  class="rm-name-item"
-                  @mousedown="onLongPressHabit(habit, $event)"
-                  @touchstart="onLongPressHabit(habit, $event)"
-                  @mouseup="cancelPress"
-                  @mouseleave="cancelPress"
-                  @touchend="cancelPress"
-                  @touchmove="cancelPress"
-                >
-                  <span class="rm-ni-icon">{{ habit.icon }}</span>
-                  <span class="rm-ni-name">{{ habit.name }}</span>
-                </div>
-              </div>
-              <div class="rm-grid-scroll" ref="gridScrollRef" @scroll="onGridScroll">
+            <div
+              class="roadmap-grid-scroll"
+              ref="gridScrollRef"
+              @scroll="syncHorizontalScroll('grid')"
+            >
+              <div class="roadmap-grid">
                 <div
                   v-for="habit in habits"
                   :key="habit.id"
@@ -488,13 +535,18 @@ function toggleToday(habitId: number): void {
   height: 100%;
 }
 
+.donut-bg {
+  stroke: var(--border);
+  fill:var(--bg);
+}
+
 .donut-fg {
   stroke: var(--accent);
 }
 
 .donut-text {
   position: absolute;
-  bottom: 0;
+  bottom: 18px;
   left: 0;
   right: 0;
   text-align: center;
@@ -530,7 +582,7 @@ function toggleToday(habitId: number): void {
 .planned-box-title {
   font-size: 11px;
   font-weight: 600;
-  }
+}
 
 .planned-stats {
   font-size: 20px;
@@ -551,6 +603,8 @@ function toggleToday(habitId: number): void {
   min-height: 0;
 }
 
+/* ======================== LEFT PANEL ======================== */
+
 .left-panel {
   flex: 2;
   display: flex;
@@ -560,158 +614,169 @@ function toggleToday(habitId: number): void {
 }
 
 .roadmap-container {
+  margin: 0 5% 0 5%;
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  min-height: 0;
 }
 
-.dynamic-month {
-  padding: 6px 12px 0;
+/* Fechas header */
+.dates-header {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  margin-bottom: 4px;
+}
+
+.spacer-cell {
+  flex: 1;
+  min-width: 316.11px;
+  max-width: 316.11px;
+  padding: 4px 6px;
   font-size: 13px;
   font-weight: 700;
   color: var(--text);
-  flex-shrink: 0;
-}
-
-.roadmap-scroll-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-height: 0;
-}
-
-.rm-top-header {
-  display: flex;
-  flex-shrink: 0;
-  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
   background: var(--bg);
 }
 
-.rm-th-spacer {
-  width: 100px;
-  min-width: 100px;
-  padding: 4px 6px;
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  border-right: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.rm-th-grid {
+.date-cells-wrapper {
+  flex: 1;
+  max-width: 303.11px;
   display: flex;
-  padding: 2px 4px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
-.rm-th-cell {
+.date-cells-wrapper::-webkit-scrollbar {
+  height: 8px;
+}
+
+.date-cell {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0;
-  width: 22px;
-  min-width: 22px;
-  font-size: 7px;
-  color: var(--text-secondary);
-  line-height: 1.1;
+  justify-content: center;
+  min-width: 24px;
+  max-width: 303.11px;
+  height: 100%;
   border-right: 1px solid var(--border-light);
+  font-size: 8px;
+  color: var(--text-secondary);
+  text-align: center;
+  box-sizing: border-box;
 }
-
-.rm-th-cell:last-child {
+.date-cell:last-child {
   border-right: none;
 }
-
-.rm-th-top {
-  font-size: 7px;
-}
-
-.rm-th-bot {
+.date-cell-top {
   font-size: 9px;
+}
+.date-cell-bot {
+  font-size: 11px;
   font-weight: 700;
   color: var(--text);
 }
 
-.rm-body-wrap {
+/* Cuerpo del roadmap (lista + grid) */
+.roadmap-body {
+  max-height: 274px;
   flex: 1;
   display: flex;
   overflow: hidden;
-  min-height: 0;
 }
 
-.rm-name-list {
-  width: 100px;
-  min-width: 100px;
+/* Columna de nombres */
+.habit-names-column {
+  max-width: 316.11px;
+  flex: 1;
+  min-width: 316.11px;
   overflow-y: auto;
   overflow-x: hidden;
   border-right: 1px solid var(--border);
   background: var(--bg);
 }
 
-.rm-name-item {
+.habit-names-column::-webkit-scrollbar {
+  width: 5px;
+}
+.habit-names-column::-webkit-scrollbar-track {
+  background: var(--border);
+  border-radius: 3px;
+}
+.habit-names-column::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 3px;
+}
+
+.habit-name-row {
   display: flex;
   align-items: center;
   gap: 3px;
-  padding: 4px 6px;
   cursor: pointer;
   user-select: none;
   border-bottom: 1px solid var(--border-light);
-  min-height: 28px;
+  height: 24px;
+  padding: 0 4px;
   box-sizing: border-box;
 }
-
-.rm-name-item:hover {
+.habit-name-row:hover {
   background: var(--bg-side);
 }
 
-.rm-ni-icon {
-  font-size: 12px;
-  flex-shrink: 0;
-}
-
-.rm-ni-name {
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.rm-grid-scroll {
+/* Grid del roadmap */
+.roadmap-grid-scroll {
   flex: 1;
-  overflow: auto;
   min-width: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+  margin-left: 0px;
+  max-width: 304.61px;
+}
+
+.roadmap-grid-scroll::-webkit-scrollbar {
+  height: 5px;
+  width: 0px;
+}
+.roadmap-grid-scroll::-webkit-scrollbar-track {
+  background: var(--border);
+  border-radius: 3px;
+}
+.roadmap-grid-scroll::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 3px;
+}
+
+.roadmap-grid {
+  display: flex;
+  flex-direction: column;
 }
 
 .rm-grid-row {
   display: flex;
-  padding: 4px 4px;
   align-items: center;
   border-bottom: 1px solid var(--border-light);
-  min-height: 28px;
+  height: 24px;
   box-sizing: border-box;
 }
 
 .rm-cell {
-  width: 20px;
-  min-width: 20px;
-  height: 20px;
-  border-radius: 4px;
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 3px;
   flex-shrink: 0;
+  margin: 0 3px;
   transition: opacity 0.15s;
-  border-right: 1px solid var(--border-light);
+  border: 1px solid var(--border-light);
+  box-sizing: border-box;
 }
-
 .rm-cell:last-child {
-  border-right: none;
-}
-
-.rm-cell:hover {
-  opacity: 0.7;
+  margin-right: 0;
 }
 
 .cell-empty { background: var(--cell-empty); }
@@ -720,31 +785,7 @@ function toggleToday(habitId: number): void {
 .cell-high  { background: var(--cell-high); }
 .cell-full  { background: var(--cell-full); }
 
-.rm-name-list::-webkit-scrollbar,
-.rm-grid-scroll::-webkit-scrollbar,
-.today-list::-webkit-scrollbar,
-.roadmap-scroll-area::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
-
-.rm-name-list::-webkit-scrollbar-track,
-.rm-grid-scroll::-webkit-scrollbar-track,
-.today-list::-webkit-scrollbar-track,
-.roadmap-scroll-area::-webkit-scrollbar-track {
-  background: var(--border);
-  border-radius: 3px;
-}
-
-.rm-name-list::-webkit-scrollbar-thumb,
-.rm-grid-scroll::-webkit-scrollbar-thumb,
-.today-list::-webkit-scrollbar-thumb,
-.roadmap-scroll-area::-webkit-scrollbar-thumb {
-  background: var(--accent);
-  border-radius: 3px;
-  opacity: 0.6;
-}
-
+/* Controles */
 .controls-row {
   display: flex;
   align-items: center;
@@ -776,7 +817,6 @@ function toggleToday(habitId: number): void {
   border-radius: 2px;
   flex-shrink: 0;
 }
-
 .swatch-full { background: var(--cell-full); }
 .swatch-mid   { background: var(--cell-mid); }
 .swatch-empty { background: var(--cell-empty); }
@@ -800,12 +840,13 @@ function toggleToday(habitId: number): void {
   transition: all 0.2s;
   font-family: inherit;
 }
-
 .toggle-btn.active {
   background: var(--accent);
   color: #FFFFFF;
   border-color: var(--accent);
 }
+
+/* ======================== RIGHT PANEL ======================== */
 
 .right-panel {
   flex: 1;
@@ -831,12 +872,28 @@ function toggleToday(habitId: number): void {
 }
 
 .today-list {
-  flex: 1;
+  max-height: 294px;
   overflow-y: auto;
   padding: 0 12px 12px;
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.today-list::-webkit-scrollbar {
+  width: 5px;
+}
+.today-list::-webkit-scrollbar-track {
+  background: var(--border);
+  border-radius: 3px;
+}
+.today-list::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 3px;
+}
+.today-list {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) var(--border);
 }
 
 .today-item {
@@ -891,7 +948,6 @@ function toggleToday(habitId: number): void {
   transition: all 0.2s;
   box-sizing: border-box;
 }
-
 .check-circle.checked {
   background: var(--accent);
   border-color: var(--accent);
@@ -915,6 +971,8 @@ function toggleToday(habitId: number): void {
   margin-top: 40px;
 }
 
+/* ======================== RESPONSIVE ======================== */
+
 @media (max-width: 640px) {
   .habits-header {
     padding: 8px;
@@ -928,11 +986,17 @@ function toggleToday(habitId: number): void {
     height: 70px;
     margin-bottom: -20px;
   }
-  .donut-text {
-    font-size: 14px;
+  .donut-completed {
+    font-size: 28px;
   }
-  .planned-text {
-    font-size: clamp(13px, 3.5vw, 20px);
+  .donut-total {
+    font-size: 11px;
+  }
+  .planned-stats {
+    font-size: 16px;
+  }
+  .planned-week {
+    font-size: 11px;
   }
   .bottom-section {
     flex-direction: column;
@@ -942,10 +1006,9 @@ function toggleToday(habitId: number): void {
     border-radius: 12px 12px 0 0;
     max-height: 160px;
   }
-  .rm-th-spacer,
-  .rm-name-list {
-    width: 70px;
-    min-width: 70px;
+  .spacer-cell,
+  .habit-names-column {
+    flex: 1;
   }
   .rm-ni-icon {
     font-size: 10px;
@@ -958,8 +1021,7 @@ function toggleToday(habitId: number): void {
     min-width: 16px;
     height: 16px;
   }
-  .rm-th-cell {
-    width: 18px;
+  .date-cell {
     min-width: 18px;
   }
   .controls-row {
