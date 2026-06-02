@@ -12,13 +12,13 @@
 
 :root {
   /* Tema claro (default) */
-  --color-bg: #f5f5f5;
-  --color-surface: #ffffff;
+  --color-bg: #e8e8e8;
+  --color-surface: #f0f0f0;
   --color-text: #1a1a1a;
   --color-text-secondary: #6b7280;
   --color-text-disabled: #b0b0b0;
-  --color-border: #e0e0e0;
-  --color-input-bg: #ffffff;
+  --color-border: #d0d0d0;
+  --color-input-bg: #f7f7f7;
   --color-hover: rgba(0, 137, 123, 0.06);
 
   --color-primary: #00897b;

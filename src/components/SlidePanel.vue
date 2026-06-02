@@ -35,7 +35,7 @@ watch(() => props.open, (val) => {
       :class="[side ?? 'left', { open: animating }]"
     >
       <div class="panel-header">
-        <button class="panel-close" @click="emit('close')">✕</button>
+        <button class="panel-close" @click="emit('close')">×</button>
         <h3 class="panel-title">{{ title }}</h3>
       </div>
       <div class="panel-body">

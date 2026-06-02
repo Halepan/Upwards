@@ -35,8 +35,8 @@ export class FinanceStore extends BaseStore<Account> {
 
     this.service = new FinanceService(this.repository, this.incomeRepo, this.expenseRepo, ruleRepo)
 
-    this.incomes = ref<IncomeEntry[]>([])
-    this.expenses = ref<ExpenseEntry[]>([])
+    this.incomes = ref<IncomeEntry[]>([]) as Ref<IncomeEntry[]>
+    this.expenses = ref<ExpenseEntry[]>([]) as Ref<ExpenseEntry[]>
     this.spendableBalance = ref(0)
   }
 

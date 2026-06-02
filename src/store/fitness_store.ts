@@ -38,8 +38,8 @@ export class FitnessStore extends BaseStore<Exercise> {
       this.routineRepo, routineLogRepo, routineLogDetailRepo, exerciseRepo
     )
 
-    this.routines = ref<Routine[]>([])
-    this.routineLogs = ref<RoutineLog[]>([])
+    this.routines = ref<Routine[]>([]) as Ref<Routine[]>
+    this.routineLogs = ref<RoutineLog[]>([]) as Ref<RoutineLog[]>
     this.progressComparison = ref<ProgressComparison | null>(null)
   }
 

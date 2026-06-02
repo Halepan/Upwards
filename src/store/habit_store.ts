@@ -29,9 +29,9 @@ export class HabitStore extends BaseStore<Habit> {
     this.repository = habitRepo
     this.service = new HabitService(habitRepo, logRepo, weekRepo, weekPlanRepo)
 
-    this.logs = ref<HabitLog[]>([])
+    this.logs = ref<HabitLog[]>([]) as Ref<HabitLog[]>
     this.weeklyProgress = ref<WeeklyProgress | null>(null)
-    this.selectedHabit = ref<Habit | null>(null)
+    this.selectedHabit = ref<Habit | null>(null) as Ref<Habit | null>
   }
 
   /* Crea un nuevo hábito y lo agrega al estado local. */

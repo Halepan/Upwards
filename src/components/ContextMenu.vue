@@ -27,7 +27,10 @@ const emit = defineEmits<{ close: [] }>()
             class="ctx-item"
             @click="item.action(); emit('close')"
           >
-            <span class="ctx-icon">{{ item.icon }}</span>
+            <span class="ctx-icon">
+              <img v-if="item.icon.endsWith('.svg')" :src="item.icon" class="ctx-icon-img" />
+              <span v-else>{{ item.icon }}</span>
+            </span>
             <span>{{ item.label }}</span>
           </button>
         </div>
@@ -78,7 +81,16 @@ const emit = defineEmits<{ close: [] }>()
 .ctx-icon {
   font-size: 16px;
   width: 20px;
-  text-align: center;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ctx-icon-img {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 .ctx-fade-enter-active,

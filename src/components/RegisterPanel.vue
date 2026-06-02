@@ -1,16 +1,25 @@
 <script setup lang="ts">
-/* Panel de registro de usuario.
-   Valida nombre único contra Dexie local y Supabase remoto.
-   Contiene campos de nombre, email, contraseña, confirmar contraseña y botón de registro. */
 import { ref, computed } from 'vue'
 import { useLanguage } from '../composables/useLanguage'
 import { useAuthStore } from '../store/auth_store'
 import { UserRepository } from '../repository/user_repository'
 import { db } from '../lib/db'
+import { useTheme } from '../composables/useTheme'
+import emailLight from '../assets/icons/clarity--email-light.svg'
+import emailDark from '../assets/icons/clarity--email-dark.svg'
+import lockLight from '../assets/icons/material-symbols-light--lock.svg'
+import lockDark from '../assets/icons/material-symbols-light--lock-outline.svg'
+import eyeOnLight from '../assets/icons/mdi--eye.svg'
+import eyeOnDark from '../assets/icons/mdi--eye-outline.svg'
+import eyeOffLight from '../assets/icons/mdi--eye-off.svg'
+import eyeOffDark from '../assets/icons/mdi--eye-off-outline.svg'
+import userLight from '../assets/icons/mdi--account.svg'
+import userDark from '../assets/icons/mdi--account-outline.svg'
 
 const emit = defineEmits<{ switchToLogin: [] }>()
 
 const { t } = useLanguage()
+const { isDark } = useTheme()
 const auth = useAuthStore()
 const userRepo = new UserRepository(db.users)
 
@@ -87,8 +96,7 @@ function onBackToLogin(): void {
       <div class="field">
         <label for="reg-username">{{ t('auth.username.label') }}</label>
         <div class="input-wrapper" :class="{ error: usernameError || auth.error === 'auth.username.taken' }">
-          <!-- TODO: Reemplazar con icono Lucide User -->
-          <span class="input-icon icon-placeholder icon-user"></span>
+          <img :src="isDark ? userDark : userLight" class="input-svg-icon" alt="" />
           <input
             id="reg-username"
             v-model="username"
@@ -111,8 +119,7 @@ function onBackToLogin(): void {
       <div class="field">
         <label for="reg-email">{{ t('auth.email.label') }}</label>
         <div class="input-wrapper" :class="{ error: emailError }">
-          <!-- TODO: Reemplazar con icono Lucide Mail -->
-          <span class="input-icon icon-placeholder icon-mail"></span>
+          <img :src="isDark ? emailDark : emailLight" class="input-svg-icon" alt="" />
           <input
             id="reg-email"
             v-model="email"
@@ -129,8 +136,7 @@ function onBackToLogin(): void {
       <div class="field">
         <label for="reg-password">{{ t('auth.password.label') }}</label>
         <div class="input-wrapper" :class="{ error: passwordError }">
-          <!-- TODO: Reemplazar con icono Lucide Lock -->
-          <span class="input-icon icon-placeholder icon-lock"></span>
+          <img :src="isDark ? lockDark : lockLight" class="input-svg-icon" alt="" />
           <input
             id="reg-password"
             v-model="password"
@@ -146,8 +152,13 @@ function onBackToLogin(): void {
             :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
             tabindex="-1"
           >
-            <!-- TODO: Reemplazar con icono Lucide Eye / EyeOff -->
-            <span class="icon-placeholder icon-eye"></span>
+            <img
+              :src="showPassword
+                ? (isDark ? eyeOffDark : eyeOffLight)
+                : (isDark ? eyeOnDark : eyeOnLight)"
+              class="eye-svg-icon"
+              :alt="showPassword ? 'Ocultar' : 'Mostrar'"
+            />
           </button>
         </div>
         <span v-if="passwordError" class="field-error">{{ passwordError }}</span>
@@ -157,8 +168,7 @@ function onBackToLogin(): void {
       <div class="field">
         <label for="reg-confirm-password">{{ t('auth.password.confirmLabel') }}</label>
         <div class="input-wrapper" :class="{ error: confirmPasswordError }">
-          <!-- TODO: Reemplazar con icono Lucide Lock -->
-          <span class="input-icon icon-placeholder icon-lock"></span>
+          <img :src="isDark ? lockDark : lockLight" class="input-svg-icon" alt="" />
           <input
             id="reg-confirm-password"
             v-model="confirmPassword"
@@ -174,8 +184,13 @@ function onBackToLogin(): void {
             :aria-label="showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
             tabindex="-1"
           >
-            <!-- TODO: Reemplazar con icono Lucide Eye / EyeOff -->
-            <span class="icon-placeholder icon-eye"></span>
+            <img
+              :src="showConfirmPassword
+                ? (isDark ? eyeOffDark : eyeOffLight)
+                : (isDark ? eyeOnDark : eyeOnLight)"
+              class="eye-svg-icon"
+              :alt="showConfirmPassword ? 'Ocultar' : 'Mostrar'"
+            />
           </button>
         </div>
         <span v-if="confirmPasswordError" class="field-error">{{ confirmPasswordError }}</span>
@@ -263,13 +278,20 @@ function onBackToLogin(): void {
   box-shadow: 0 0 0 3px rgba(229, 57, 53, 0.2);
 }
 
-.input-icon {
-  width: 24px;
-  height: 24px;
+.input-svg-icon {
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
-  background: var(--color-border);
-  border-radius: 50%;
+  display: block;
   opacity: 0.5;
+  color: currentColor;
+}
+
+.eye-svg-icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+  color: currentColor;
 }
 
 .input-wrapper input {
@@ -316,12 +338,7 @@ function onBackToLogin(): void {
   opacity: 1;
 }
 
-.toggle-password .icon-placeholder {
-  width: 20px;
-  height: 20px;
-  background: var(--color-border);
-  border-radius: 50%;
-}
+
 
 .field-error {
   font-size: 12px;

@@ -24,9 +24,10 @@ export class UserRepository extends BaseDexieRepository<UserData, User> {
   async findByName(name: string): Promise<User | undefined> {
     const lowerName = name.toLowerCase()
     const allUsers = await this.table.toArray()
-    return allUsers.find(
+    const user = allUsers.find(
       userData => userData.name.toLowerCase() === lowerName
     )
+    return user ? this.fromDB(user) : undefined
   }
 
   async emailExists(email: string): Promise<boolean> {

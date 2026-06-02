@@ -4,7 +4,13 @@ import { useLongPress } from '../composables/useLongPress'
 import ContextMenu from './ContextMenu.vue'
 import FloatingActionButton from './FloatingActionButton.vue'
 import SlidePanel from './SlidePanel.vue'
+import WeekPlanner from './WeekPlanner.vue'
 import type { FabAction } from './FloatingActionButton.vue'
+import type { PlannerItem } from './WeekPlanner.vue'
+import editIcon from '../assets/icons/mdi--check-outline.svg'
+import deleteIcon from '../assets/icons/weui--delete-outlined.svg'
+import habitIcon from '../assets/icons/si--book-line.svg'
+import calendarIcon from '../assets/icons/icon-park-outline--left-bar.svg'
 
 interface HabitLog {
   date: string
@@ -103,12 +109,14 @@ function fmt(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-// Roadmap desde 2025 hasta hoy
+// Roadmap: render block-sized windows (daily=3mo, weekly=26w, monthly=24mo)
 const roadmapColumns = computed<RoadmapCol[]>(() => {
   const cols: RoadmapCol[] = []
+  const start = new Date(roadmapStart.value)
   if (viewMode.value === 'diario') {
-    const cur = new Date(DATA_START)
-    while (cur <= today) {
+    const end = new Date(start.getFullYear(), start.getMonth() + 3, 0) // 3 months
+    const cur = new Date(start)
+    while (cur <= end && cur <= today) {
       const d = new Date(cur)
       cols.push({
         key: fmt(d),
@@ -125,13 +133,13 @@ const roadmapColumns = computed<RoadmapCol[]>(() => {
       cur.setDate(cur.getDate() + 1)
     }
   } else if (viewMode.value === 'semanal') {
-    const start = new Date(DATA_START)
-    start.setDate(start.getDate() - start.getDay() + 1)  // lunes
+    // 26 weeks (~6 months)
     const cur = new Date(start)
-    while (cur <= today) {
+    cur.setDate(cur.getDate() - cur.getDay() + 1) // Monday of first week
+    const maxWeeks = 26
+    let weekCount = 0
+    while (weekCount < maxWeeks && cur <= today) {
       const mon = new Date(cur)
-      const sun = new Date(mon)
-      sun.setDate(mon.getDate() + 6)
       cols.push({
         key: `w${weekNum(mon)}`,
         date: mon,
@@ -142,7 +150,8 @@ const roadmapColumns = computed<RoadmapCol[]>(() => {
         score: (h: Habit) => {
           let done = 0, total = 0
           const d = new Date(mon)
-          while (d <= sun) {
+          const sun = new Date(d); sun.setDate(d.getDate() + 6)
+          while (d <= sun && d <= today) {
             const log = h.logs.find(l => l.date === fmt(d))
             if (log) { total++; if (log.done) done++ }
             d.setDate(d.getDate() + 1)
@@ -151,18 +160,17 @@ const roadmapColumns = computed<RoadmapCol[]>(() => {
         },
       })
       cur.setDate(cur.getDate() + 7)
+      weekCount++
     }
-  } else { // mensual
-    const start = new Date(DATA_START.getFullYear(), DATA_START.getMonth(), 1)
-    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+  } else { // mensual – 24 months (2 years)
+    const end = new Date(start.getFullYear() + 2, start.getMonth(), 1)
     const cur = new Date(start)
-    while (cur <= end) {
-      const d = new Date(cur)
-      const y = d.getFullYear()
-      const mm = d.getMonth()
+    while (cur < end && cur <= today) {
+      const y = cur.getFullYear()
+      const mm = cur.getMonth()
       cols.push({
         key: `${y}-${String(mm + 1).padStart(2, '0')}`,
-        date: d,
+        date: new Date(cur),
         top: String(y),
         mid: '',
         bot: monthNames[mm],
@@ -202,28 +210,86 @@ const editPanel = ref(false)
 const panelTitle = ref('')
 const editingHabit = ref<Habit | null>(null)
 
-function onLongPressHabit(habit: Habit, event: MouseEvent | TouchEvent): void {
-  editingHabit.value = habit
-  startPress(event, [
-    { icon: '✏️', label: 'Editar', action: () => openEdit(habit) },
-    { icon: '🗑️', label: 'Eliminar', action: () => deleteHabit(habit) },
-  ])
+// Habit form state
+const formName = ref('')
+const formIcon = ref('📖')
+const formFrequencyGoal = ref(7)
+
+const habitIcons = ['📖', '🧘', '💧', '🏋️', '✍️', '🌎', '🚫', '🤸', '😴', '🚶', '🍎', '🚭', '🎯', '🎨', '🎵', '📝', '☕', '🧠', '💪', '🧹']
+
+function openEdit(habit?: Habit): void {
+  if (habit) {
+    editingHabit.value = habit
+    formName.value = habit.name
+    formIcon.value = habit.icon
+    formFrequencyGoal.value = habit.frequencyGoal
+    panelTitle.value = `Editar ${habit.name}`
+  } else {
+    editingHabit.value = null
+    formName.value = ''
+    formIcon.value = '📖'
+    formFrequencyGoal.value = 7
+    panelTitle.value = 'Nuevo hábito'
+  }
+  editPanel.value = true
 }
 
-function openEdit(habit: Habit): void {
-  panelTitle.value = `Editar ${habit.name}`
-  editPanel.value = true
+function saveHabit() {
+  if (!formName.value.trim()) return
+  if (editingHabit.value) {
+    editingHabit.value.name = formName.value.trim()
+    editingHabit.value.icon = formIcon.value
+    editingHabit.value.frequencyGoal = formFrequencyGoal.value
+  } else {
+    habits.value.push({
+      id: Date.now() + Math.floor(Math.random() * 10000),
+      name: formName.value.trim(),
+      icon: formIcon.value,
+      frequencyGoal: formFrequencyGoal.value,
+      logs: [],
+    })
+  }
+  editPanel.value = false
+  editingHabit.value = null
 }
 
 function deleteHabit(habit: Habit): void {
   habits.value = habits.value.filter(h => h.id !== habit.id)
 }
 
+function onLongPressHabit(habit: Habit, event: MouseEvent | TouchEvent): void {
+  startPress(event, [
+    { icon: editIcon, label: 'Editar', action: () => openEdit(habit) },
+    { icon: deleteIcon, label: 'Eliminar', action: () => deleteHabit(habit) },
+  ])
+}
+
+const planningMode = ref(false)
+const planningTitle = ref('')
+
 const fabActions: FabAction[] = [
-  { icon: '➕', label: 'Nuevo hábito', action: () => { panelTitle.value = 'Nuevo hábito'; editPanel.value = true } },
-  { icon: '📅', label: 'Planificar semana', action: () => { panelTitle.value = 'Planificar semana'; editPanel.value = true } },
-  { icon: '✏️', label: 'Editar semana planificada', action: () => { panelTitle.value = 'Editar semana'; editPanel.value = true } },
+  { icon: habitIcon, label: 'Nuevo hábito', action: () => openEdit() },
+  { icon: calendarIcon, label: 'Planificar semana', action: () => { planningTitle.value = 'Planificar semana'; planningMode.value = true } },
+  { icon: editIcon, label: 'Editar semana planificada', action: () => { planningTitle.value = 'Editar semana planificada'; planningMode.value = true } },
 ]
+
+function onPlanConfirm(assignments: Record<number, number[]>) {
+  console.log('Habits planned:', assignments)
+  planningMode.value = false
+}
+
+function onPlanCancel() {
+  planningMode.value = false
+}
+
+function onPlanEdit(item: PlannerItem) {
+  const habit = habits.value.find(h => h.id === item.id)
+  if (habit) openEdit(habit)
+}
+
+function onPlanDelete(item: PlannerItem) {
+  habits.value = habits.value.filter(h => h.id !== item.id)
+}
 
 function toggleToday(habitId: number): void {
   const h = habits.value.find(h => h.id === habitId)
@@ -234,6 +300,47 @@ function toggleToday(habitId: number): void {
   } else {
     h.logs.push({ date: todayStr, done: true })
   }
+}
+
+// Roadmap: block navigation with size per viewMode
+// Daily → 3 months (quarter), Weekly → 26 weeks (6 months), Monthly → 24 months (2 years)
+const roadmapStart = ref(new Date(today.getFullYear(), today.getMonth(), 1))
+
+function blockSizeMonths(): number {
+  return viewMode.value === 'diario' ? 3 : viewMode.value === 'semanal' ? 6 : 24
+}
+
+function blockLabelTop(): string {
+  const s = roadmapStart.value
+  if (viewMode.value === 'semanal') {
+    return String(s.getFullYear())
+  }
+  if (viewMode.value === 'mensual') {
+    const end = new Date(s.getFullYear() + 2, 0, 1)
+    return `${s.getFullYear()} – ${end.getFullYear() - 1}`
+  }
+  return ''
+}
+
+function blockLabelBot(): string {
+  const s = roadmapStart.value
+  const m = blockSizeMonths()
+  if (viewMode.value === 'diario' || viewMode.value === 'semanal') {
+    const end = new Date(s.getFullYear(), s.getMonth() + m, 0)
+    return `${monthNames[s.getMonth()]} – ${monthNames[end.getMonth()]}`
+  }
+  return '' // monthly shows year only (in top)
+}
+
+function navigateBlock(delta: number) {
+  const d = new Date(roadmapStart.value)
+  const step = blockSizeMonths()
+  d.setMonth(d.getMonth() + delta * step)
+  const earliest = new Date(DATA_START.getFullYear(), DATA_START.getMonth(), 1)
+  const latest = new Date(today.getFullYear(), today.getMonth(), 1)
+  if (d < earliest) roadmapStart.value = earliest
+  else if (d > latest) roadmapStart.value = latest
+  else roadmapStart.value = d
 }
 
 // Refs para sincronización
@@ -263,30 +370,37 @@ function syncHorizontalScroll(source: 'dates' | 'grid') {
   syncingHoriz = false
 }
 
-// Al montar y al cambiar de vista, ir al final (fecha de hoy)
+function onDatesScroll() { syncHorizontalScroll('dates') }
+function onGridScroll() { syncHorizontalScroll('grid') }
+
+// Jump to current block on mount / view change
+function jumpToCurrent() {
+  const now = new Date(today.getFullYear(), today.getMonth(), 1)
+  roadmapStart.value = now
+}
+
 onMounted(async () => {
+  jumpToCurrent()
   await nextTick()
-  if (datesScrollRef.value) {
-    datesScrollRef.value.scrollLeft = datesScrollRef.value.scrollWidth
-  }
-  if (gridScrollRef.value) {
-    gridScrollRef.value.scrollLeft = gridScrollRef.value.scrollWidth
-  }
 })
 
 watch(viewMode, async () => {
+  jumpToCurrent()
   await nextTick()
-  if (datesScrollRef.value) {
-    datesScrollRef.value.scrollLeft = datesScrollRef.value.scrollWidth
-  }
-  if (gridScrollRef.value) {
-    gridScrollRef.value.scrollLeft = gridScrollRef.value.scrollWidth
-  }
 })
 </script>
 
 <template>
-  <div class="habits-page">
+  <WeekPlanner
+    v-if="planningMode"
+    :items="habits.map(h => ({ id: h.id, name: h.name, icon: h.icon }))"
+    :title="planningTitle"
+    @confirm="onPlanConfirm"
+    @cancel="onPlanCancel"
+    @edit="onPlanEdit"
+    @delete="onPlanDelete"
+  />
+  <div v-else class="habits-page">
     <header class="habits-header">
       <div class="progress-box">
         <span class="progress-title"><br>Cumplidos hoy<br></span>
@@ -320,12 +434,20 @@ watch(viewMode, async () => {
       <div class="left-panel">
         <div class="roadmap-container">
           <!-- Cabecera de fechas (scroll horizontal sincronizado) -->
+          <div class="month-nav">
+            <button class="month-nav-btn" @click="navigateBlock(-1)">◀</button>
+            <span class="month-nav-label">
+              <span v-if="blockLabelTop()" class="mn-top">{{ blockLabelTop() }}</span>
+              <span class="mn-bot">{{ blockLabelBot() }}</span>
+            </span>
+            <button class="month-nav-btn" @click="navigateBlock(1)">▶</button>
+          </div>
           <div class="dates-header">
             <div class="spacer-cell">Hábito</div>
             <div
               class="date-cells-wrapper"
               ref="datesScrollRef"
-              @scroll="syncHorizontalScroll('dates')"
+              @scroll="onDatesScroll"
             >
               <div
                 v-for="col in roadmapColumns"
@@ -356,7 +478,10 @@ watch(viewMode, async () => {
                 @touchend="cancelPress"
                 @touchmove="cancelPress"
               >
-                <span class="rm-ni-icon">{{ habit.icon }}</span>
+                <span class="rm-ni-icon">
+                  <img v-if="habit.icon.endsWith('.svg')" :src="habit.icon" class="habit-svg-icon" :alt="habit.name" />
+                  <span v-else>{{ habit.icon }}</span>
+                </span>
                 <span class="rm-ni-name">{{ habit.name }}</span>
               </div>
             </div>
@@ -364,7 +489,7 @@ watch(viewMode, async () => {
             <div
               class="roadmap-grid-scroll"
               ref="gridScrollRef"
-              @scroll="syncHorizontalScroll('grid')"
+              @scroll="onGridScroll"
             >
               <div class="roadmap-grid">
                 <div
@@ -408,7 +533,10 @@ watch(viewMode, async () => {
         <h3 class="today-title">Hoy</h3>
         <div class="today-list">
           <div v-for="habit in todayHabits" :key="habit.id" class="today-item">
-            <span class="today-icon">{{ habit.icon }}</span>
+            <span class="today-icon">
+              <img v-if="habit.icon.endsWith('.svg')" :src="habit.icon" class="habit-svg-icon" :alt="habit.name" />
+              <span v-else>{{ habit.icon }}</span>
+            </span>
             <span class="today-name">{{ habit.name }}</span>
             <label class="check-wrap">
               <input type="checkbox" :checked="habit.done" @change="toggleToday(habit.id)" class="check-input" />
@@ -434,8 +562,42 @@ watch(viewMode, async () => {
 
     <FloatingActionButton :actions="fabActions" />
 
-    <SlidePanel :open="editPanel" :title="panelTitle" side="right" @close="editPanel = false">
-      <p class="panel-placeholder">Contenido del formulario</p>
+    <SlidePanel :open="editPanel" :title="panelTitle" side="right" @close="editPanel = false; editingHabit = null">
+      <div class="habit-form">
+        <label class="hf-field">
+          <span class="hf-label">Nombre</span>
+          <input v-model="formName" type="text" class="hf-input" placeholder="Ej: Leer 30 min" />
+        </label>
+
+        <label class="hf-field">
+          <span class="hf-label">Icono</span>
+          <div class="hf-icon-picker">
+            <button
+              v-for="ic in habitIcons"
+              :key="ic"
+              class="hf-icon-btn"
+              :class="{ active: formIcon === ic }"
+              @click="formIcon = ic"
+            >{{ ic }}</button>
+          </div>
+        </label>
+
+        <label class="hf-field">
+          <span class="hf-label">Frecuencia semanal</span>
+          <div class="hf-freq">
+            <button class="hf-step-btn" @click="formFrequencyGoal = Math.max(1, formFrequencyGoal - 1)">−</button>
+            <span class="hf-freq-val">{{ formFrequencyGoal }} / 7 días</span>
+            <button class="hf-step-btn" @click="formFrequencyGoal = Math.min(7, formFrequencyGoal + 1)">+</button>
+          </div>
+        </label>
+
+        <div class="hf-actions">
+          <button class="hf-btn cancel" @click="editPanel = false; editingHabit = null">Cancelar</button>
+          <button class="hf-btn save" @click="saveHabit" :disabled="!formName.trim()">
+            {{ editingHabit ? 'Guardar' : 'Crear' }}
+          </button>
+        </div>
+      </div>
     </SlidePanel>
   </div>
 </template>
@@ -621,6 +783,51 @@ watch(viewMode, async () => {
   overflow: hidden;
 }
 
+/* Month navigation bar */
+.month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 4px 0 2px;
+}
+
+.month-nav-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-color);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.month-nav-btn:hover {
+  background: var(--hover-bg);
+}
+
+.month-nav-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.2;
+  min-width: 110px;
+  text-align: center;
+}
+
+.mn-top {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #888);
+}
+
+.mn-bot {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
 /* Fechas header */
 .dates-header {
   display: flex;
@@ -723,6 +930,21 @@ watch(viewMode, async () => {
   height: 24px;
   padding: 0 4px;
   box-sizing: border-box;
+}
+
+.rm-ni-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.rm-ni-icon .habit-svg-icon {
+  width: 14px;
+  height: 14px;
+  display: block;
 }
 .habit-name-row:hover {
   background: var(--bg-side);
@@ -909,6 +1131,17 @@ watch(viewMode, async () => {
 .today-icon {
   font-size: 16px;
   flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.today-icon .habit-svg-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 .today-name {
@@ -965,10 +1198,145 @@ watch(viewMode, async () => {
   color: var(--text-secondary);
 }
 
-.panel-placeholder {
+/* ======================== HABIT FORM ======================== */
+
+.habit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 4px 20px;
+}
+
+.hf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hf-label {
+  font-size: 11px;
+  font-weight: 600;
   color: var(--color-text-secondary);
-  text-align: center;
-  margin-top: 40px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.hf-input {
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--text-color);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.hf-input:focus {
+  border-color: var(--accent);
+}
+
+.hf-icon-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.hf-icon-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--card-bg);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.hf-icon-btn.active {
+  border-color: var(--accent);
+  background: var(--accent-pale);
+  box-shadow: 0 0 0 2px var(--accent-light);
+}
+
+.hf-freq {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hf-step-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-color);
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.hf-step-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.hf-freq-val {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.hf-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.hf-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.hf-btn.cancel {
+  background: var(--border-color);
+  color: var(--text-color);
+}
+
+.hf-btn.cancel:hover {
+  background: var(--color-text-secondary);
+  color: #fff;
+}
+
+.hf-btn.save {
+  background: var(--accent);
+  color: #fff;
+}
+
+.hf-btn.save:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.hf-btn.save:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 /* ======================== RESPONSIVE ======================== */
@@ -1012,6 +1380,17 @@ watch(viewMode, async () => {
   }
   .rm-ni-icon {
     font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+  }
+
+  .rm-ni-icon .habit-svg-icon {
+    width: 14px;
+    height: 14px;
+    display: block;
   }
   .rm-ni-name {
     font-size: 8px;

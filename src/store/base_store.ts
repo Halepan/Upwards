@@ -11,7 +11,7 @@ export abstract class BaseStore<T extends { id?: number; uuid: string }> {
   protected abstract repository: ISyncableRepository<T>
 
   constructor() {
-    this._items = ref<T[]>([])
+    this._items = ref<T[]>([]) as Ref<T[]>
     this._isLoading = ref(false)
     this._error = ref(null)
   }

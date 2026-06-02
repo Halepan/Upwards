@@ -10,8 +10,8 @@ import LoginPanel from './LoginPanel.vue'
 import RegisterPanel from './RegisterPanel.vue'
 import { useLanguage } from '../composables/useLanguage'
 import { useTheme } from '../composables/useTheme'
-import logoLight from '../assets/ulightvector.svg'
-import logoDark from '../assets/udarkvector.svg'
+import lightIcon from '../assets/icons/lighticon.svg'
+import darkIcon from '../assets/icons/blackicon.svg'
 
 const { lang } = useLanguage()
 const { isDark } = useTheme()
@@ -42,7 +42,7 @@ function switchToLogin(): void {
       <div class="auth-header">
         <h1 class="app-name">
           <img
-            :src="isDark ? logoDark : logoLight"
+            :src="isDark ? darkIcon : lightIcon"
             alt="U"
             class="logo-u-img"
           />

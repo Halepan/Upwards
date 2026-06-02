@@ -1,23 +1,37 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useLongPress } from '../composables/useLongPress'
+import { useTheme } from '../composables/useTheme'
 import ContextMenu from './ContextMenu.vue'
 import FloatingActionButton from './FloatingActionButton.vue'
 import SlidePanel from './SlidePanel.vue'
-import FinanceChart from './FinanceChart.vue'
+import GenericChart from './GenericChart.vue'
 import type { FabAction } from './FloatingActionButton.vue'
+import type { ChartSeries } from './GenericChart.vue'
+import walletIcon from '../assets/icons/mdi--wallet-bifold.svg'
+import incomeIcon from '../assets/icons/mdi--wallet-bifold-outline.svg'
+import accountIcon from '../assets/icons/mdi--account-outline.svg'
+import editIcon from '../assets/icons/mdi--check-outline.svg'
+import deleteIcon from '../assets/icons/weui--delete-outlined.svg'
+import alertIcon from '../assets/icons/weui--delete-filled.svg'
+import checkIcon from '../assets/icons/mdi--check-bold.svg'
 
 type Trend = 'up' | 'down' | 'flat'
+
+interface Derivation {
+  sourceAccountId: number
+  percentage: number
+}
 
 interface AccountCard {
   id: number
   name: string
-  type: string
   balance: number
   prevBalance: number
   color: string
   spent: number
   trend: Trend
+  derivations: Derivation[]  // what % of each source account's income flows here
 }
 
 const props = defineProps<{
@@ -29,16 +43,16 @@ const emit = defineEmits<{
 }>()
 
 const accounts = ref<AccountCard[]>([
-  { id: 1, name: 'Gasto diario', type: 'spendable', balance: 3200, prevBalance: 2800, color: '#00897b', spent: 2700, trend: 'up' },
-  { id: 2, name: 'Ahorro', type: 'savings', balance: 18500, prevBalance: 19200, color: '#1565c0', spent: 0, trend: 'down' },
-  { id: 3, name: 'Inversión', type: 'investment', balance: 45300, prevBalance: 45300, color: '#e65100', spent: 0, trend: 'flat' },
-  { id: 4, name: 'Donación', type: 'donation', balance: 1200, prevBalance: 1100, color: '#6a1b9a', spent: 0, trend: 'up' },
-  { id: 5, name: 'Vivienda', type: 'spendable', balance: 5800, prevBalance: 6200, color: '#2e7d32', spent: 5100, trend: 'down' },
-  { id: 6, name: 'Transporte', type: 'spendable', balance: 950, prevBalance: 870, color: '#f9a825', spent: 800, trend: 'up' },
-  { id: 7, name: 'Salud', type: 'spendable', balance: 3400, prevBalance: 3200, color: '#ec407a', spent: 2100, trend: 'up' },
-  { id: 8, name: 'Educación', type: 'investment', balance: 12000, prevBalance: 12500, color: '#ab47bc', spent: 0, trend: 'down' },
-  { id: 9, name: 'Vacaciones', type: 'savings', balance: 7800, prevBalance: 7800, color: '#26c6da', spent: 0, trend: 'flat' },
-  { id: 10, name: 'Emergencia', type: 'savings', balance: 15000, prevBalance: 14000, color: '#8d6e63', spent: 0, trend: 'up' },
+  { id: 1, name: 'Gasto diario', balance: 3200, prevBalance: 2800, color: '#00897b', spent: 2700, trend: 'up', derivations: [] },
+  { id: 2, name: 'Ahorro', balance: 18500, prevBalance: 19200, color: '#1565c0', spent: 0, trend: 'down', derivations: [{ sourceAccountId: 1, percentage: 20 }] },
+  { id: 3, name: 'Inversión', balance: 45300, prevBalance: 45300, color: '#e65100', spent: 0, trend: 'flat', derivations: [{ sourceAccountId: 1, percentage: 10 }] },
+  { id: 4, name: 'Donación', balance: 1200, prevBalance: 1100, color: '#6a1b9a', spent: 0, trend: 'up', derivations: [{ sourceAccountId: 1, percentage: 5 }] },
+  { id: 5, name: 'Vivienda', balance: 5800, prevBalance: 6200, color: '#2e7d32', spent: 5100, trend: 'down', derivations: [] },
+  { id: 6, name: 'Transporte', balance: 950, prevBalance: 870, color: '#f9a825', spent: 800, trend: 'up', derivations: [] },
+  { id: 7, name: 'Salud', balance: 3400, prevBalance: 3200, color: '#ec407a', spent: 2100, trend: 'up', derivations: [] },
+  { id: 8, name: 'Educación', balance: 12000, prevBalance: 12500, color: '#ab47bc', spent: 0, trend: 'down', derivations: [{ sourceAccountId: 1, percentage: 10 }] },
+  { id: 9, name: 'Vacaciones', balance: 7800, prevBalance: 7800, color: '#26c6da', spent: 0, trend: 'flat', derivations: [{ sourceAccountId: 1, percentage: 5 }] },
+  { id: 10, name: 'Emergencia', balance: 15000, prevBalance: 14000, color: '#8d6e63', spent: 0, trend: 'up', derivations: [] },
 ])
 
 const budgetAlert = computed(() => {
@@ -101,14 +115,16 @@ const filterYear = ref('')
 const filterMonth = ref('')
 
 const filteredHistory = computed(() => {
-  return history.value.filter(e => {
-    if (filterAccount.value && e.account !== filterAccount.value) return false
-    if (filterType.value !== 'all' && e.type !== filterType.value) return false
-    if (filterCategory.value && e.category !== filterCategory.value) return false
-    if (filterYear.value && !e.date.startsWith(filterYear.value)) return false
-    if (filterMonth.value && !e.date.startsWith(`${filterYear.value || e.date.slice(0, 4)}-${filterMonth.value}`)) return false
-    return true
-  })
+  return history.value
+    .filter(e => {
+      if (filterAccount.value && e.account !== filterAccount.value) return false
+      if (filterType.value !== 'all' && e.type !== filterType.value) return false
+      if (filterCategory.value && e.category !== filterCategory.value) return false
+      if (filterYear.value && !e.date.startsWith(filterYear.value)) return false
+      if (filterMonth.value && !e.date.startsWith(`${filterYear.value || e.date.slice(0, 4)}-${filterMonth.value}`)) return false
+      return true
+    })
+    .sort((a, b) => b.date.localeCompare(a.date))
 })
 
 const filterCategories = computed(() => {
@@ -141,38 +157,259 @@ const segments = computed(() => {
   })
 })
 
+const { isDark } = useTheme()
 
+function seededRand(seed: number) {
+  let s = seed
+  return () => {
+    s = (s * 1664525 + 1013904223) & 0xffffffff
+    return (s >>> 0) / 0xffffffff
+  }
+}
+
+function generateData(
+  startVal: number,
+  volatility: number,
+  drift: number,
+  seed: number,
+  minVal = 10,
+  maxVal = 10000,
+): { x: Date; y: number }[] {
+  const rand = seededRand(seed)
+  let val = startVal
+  const data: { x: Date; y: number }[] = []
+  const start = new Date(2023, 0, 1)
+  const end = new Date(2026, 11, 31)
+  const cur = new Date(start)
+
+  while (cur <= end) {
+    val += drift + (rand() - 0.5) * volatility
+    val = Math.max(minVal, Math.min(maxVal, val))
+    data.push({ x: new Date(cur), y: Math.round(val) })
+    cur.setDate(cur.getDate() + 1)
+  }
+  return data
+}
+
+const financeSeries = computed<ChartSeries[]>(() =>
+  accounts.value.map(acct => {
+    const b = Math.max(acct.balance, 100)
+    const drift = acct.trend === 'up' ? b * 0.001 : acct.trend === 'down' ? -b * 0.001 : 0
+    return {
+      label: acct.name,
+      data: generateData(b * 0.8, b * 0.15, drift, acct.id, 0, b * 2),
+      color: acct.color,
+    }
+  })
+)
 
 const {
   contextVisible, contextItems, contextX, contextY,
   startPress, cancelPress, closeContext,
 } = useLongPress()
 
+// ---------- Account editing state ----------
 const editPanel = ref(false)
 const panelTitle = ref('')
 const editingAccount = ref<AccountCard | null>(null)
 
-function onLongPressAccount(acct: AccountCard, event: MouseEvent | TouchEvent): void {
-  editingAccount.value = acct
-  startPress(event, [
-    { icon: '✏️', label: 'Editar', action: () => openEdit(acct) },
-    { icon: '🗑️', label: 'Eliminar', action: () => deleteAccount(acct) },
-  ])
+// Account form fields
+const acctFormName = ref('')
+const acctFormBalance = ref(0)
+const acctFormColor = ref('#00897b')
+const acctFormAdvanced = ref(false)
+// Derivations config: for each source account (excluding self), store percentage
+const acctFormDerivations = ref<{ accountId: number; name: string; pct: number }[]>([])
+
+const accountColors = ['#00897b', '#1565c0', '#e65100', '#6a1b9a', '#2e7d32', '#f9a825', '#ec407a', '#ab47bc', '#26c6da', '#8d6e63']
+
+function initDerivations(excludeId?: number) {
+  acctFormDerivations.value = accounts.value
+    .filter(a => a.id !== excludeId)
+    .map(a => {
+      const existing = excludeId
+        ? accounts.value.find(ac => ac.id === excludeId)?.derivations.find(d => d.sourceAccountId === a.id)
+        : null
+      return { accountId: a.id, name: a.name, pct: existing?.percentage || 0 }
+    })
 }
 
-function openEdit(acct: AccountCard): void {
-  panelTitle.value = `Editar ${acct.name}`
+function openAccountForm(acct?: AccountCard) {
+  if (acct) {
+    editingAccount.value = acct
+    acctFormName.value = acct.name
+    acctFormBalance.value = acct.balance
+    acctFormColor.value = acct.color
+    acctFormAdvanced.value = acct.derivations.length > 0
+    initDerivations(acct.id)
+    panelTitle.value = `Editar ${acct.name}`
+  } else {
+    editingAccount.value = null
+    acctFormName.value = ''
+    acctFormBalance.value = 0
+    acctFormColor.value = '#00897b'
+    acctFormAdvanced.value = false
+    initDerivations()
+    panelTitle.value = 'Nueva cuenta'
+  }
   editPanel.value = true
+}
+
+function saveAccount() {
+  if (!acctFormName.value.trim()) return
+  const derivations: Derivation[] = acctFormAdvanced.value
+    ? acctFormDerivations.value.filter(d => d.pct > 0).map(d => ({ sourceAccountId: d.accountId, percentage: d.pct }))
+    : []
+  if (editingAccount.value) {
+    const a = editingAccount.value
+    a.name = acctFormName.value.trim()
+    a.balance = acctFormBalance.value
+    a.color = acctFormColor.value
+    a.derivations = derivations
+  } else {
+    accounts.value.push({
+      id: Date.now() + Math.floor(Math.random() * 10000),
+      name: acctFormName.value.trim(),
+      balance: acctFormBalance.value,
+      prevBalance: acctFormBalance.value,
+      color: acctFormColor.value,
+      spent: 0,
+      trend: 'flat',
+      derivations,
+    })
+  }
+  editPanel.value = false
+  editingAccount.value = null
+}
+
+function onLongPressAccount(acct: AccountCard, event: MouseEvent | TouchEvent): void {
+  startPress(event, [
+    { icon: editIcon, label: 'Editar', action: () => openAccountForm(acct) },
+    { icon: deleteIcon, label: 'Eliminar', action: () => deleteAccount(acct) },
+  ])
 }
 
 function deleteAccount(acct: AccountCard): void {
   accounts.value = accounts.value.filter(a => a.id !== acct.id)
 }
 
+// ---------- Transaction dialog state ----------
+const showTxDialog = ref(false)
+const txType = ref<'income' | 'expense'>('expense')
+const txConcept = ref('')
+const txAmount = ref(0)
+const txCategory = ref('')
+const txAccount = ref('')
+const txDate = ref('')
+
+// Income-specific
+const txIncomeType = ref<'Trabajo' | 'Negocio' | 'Donativo'>('Trabajo')
+// Derivation amounts: account name → actual amount received
+const txDerivedAmounts = ref<Record<string, number>>({})
+
+const incomeTypes = ['Trabajo', 'Negocio', 'Donativo'] as const
+const txCategories = ['Alimentación', 'Vivienda', 'Transporte', 'Salud', 'Ocio', 'Educación', 'Ropa', 'Suscripciones', 'Otros']
+
+function openTxDialog(type: 'income' | 'expense') {
+  txType.value = type
+  txConcept.value = ''
+  txAmount.value = 0
+  txCategory.value = type === 'expense' ? 'Alimentación' : ''
+  txAccount.value = accounts.value[0]?.name || ''
+  txDate.value = new Date().toISOString().slice(0, 10)
+  txIncomeType.value = 'Trabajo'
+  txDerivedAmounts.value = {}
+  showTxDialog.value = true
+}
+
+// Find accounts derived from the selected source account
+function getDerivedAccounts() {
+  const sourceAcct = accounts.value.find(a => a.name === txAccount.value)
+  if (!sourceAcct || !txAmount.value || txAmount.value <= 0) return []
+  const result: { account: AccountCard; pct: number; amount: number }[] = []
+  for (const acct of accounts.value) {
+    for (const d of acct.derivations) {
+      if (d.sourceAccountId === sourceAcct.id && d.percentage > 0) {
+        result.push({
+          account: acct,
+          pct: d.percentage,
+          amount: (txAmount.value * d.percentage) / 100,
+        })
+      }
+    }
+  }
+  return result
+}
+
+// Watch account or amount changes to recompute derived amounts
+import { watch } from 'vue'
+watch([txAccount, txAmount], () => {
+  if (txType.value !== 'income') return
+  const derived = getDerivedAccounts()
+  const amounts: Record<string, number> = {}
+  for (const d of derived) {
+    amounts[d.account.name] = d.amount
+  }
+  txDerivedAmounts.value = amounts
+})
+
+function saveTransaction() {
+  if (!txConcept.value.trim() || txAmount.value <= 0) return
+  if (txType.value === 'expense') {
+    if (!txAccount.value) return
+    const expenseAccount = accounts.value.find(a => a.name === txAccount.value)
+    if (expenseAccount) expenseAccount.balance -= txAmount.value
+    history.value.push({
+      id: Date.now() + Math.floor(Math.random() * 10000),
+      concept: txConcept.value.trim(),
+      amount: -txAmount.value,
+      type: 'expense',
+      category: txCategory.value,
+      date: txDate.value,
+      account: txAccount.value,
+    })
+  } else {
+    const derivedList = getDerivedAccounts()
+    // Main income entry
+    const source = accounts.value.find(a => a.name === txAccount.value)
+    if (!source) return
+    // Full amount enters source account first
+    source.balance += txAmount.value
+    history.value.push({
+      id: Date.now() + Math.floor(Math.random() * 10000),
+      concept: `${txConcept.value.trim()} (${txIncomeType.value})`,
+      amount: txAmount.value,
+      type: 'income',
+      category: txIncomeType.value,
+      date: txDate.value,
+      account: txAccount.value,
+    })
+
+    // Derived entries: transfer from source to derived accounts
+    for (const d of derivedList) {
+      const actualAmount = txDerivedAmounts.value[d.account.name] ?? d.amount
+      if (actualAmount <= 0) continue
+      // Transfer: subtract from source, add to target
+      source.balance -= actualAmount
+      d.account.balance += actualAmount
+      history.value.push({
+        id: Date.now() + Math.floor(Math.random() * 10000) + 1,
+        concept: `↳ Traspaso: ${txConcept.value.trim()} → ${d.account.name}`,
+        amount: actualAmount,
+        type: 'income',
+        category: 'Derivado',
+        date: txDate.value,
+        account: d.account.name,
+      })
+    }
+  }
+  showTxDialog.value = false
+}
+
 const fabActions: FabAction[] = [
-  { icon: '💸', label: 'Nuevo gasto', action: () => {} },
-  { icon: '💵', label: 'Nuevo ingreso', action: () => {} },
-  { icon: '🏦', label: 'Nueva cuenta', action: () => {} },
+  { icon: walletIcon, label: 'Nuevo gasto', action: () => openTxDialog('expense') },
+  { icon: incomeIcon, label: 'Nuevo ingreso', action: () => openTxDialog('income') },
+  { icon: accountIcon, label: 'Nueva cuenta', action: () => openAccountForm() },
 ]
 
 function formatCurrency(n: number): string {
@@ -212,7 +449,7 @@ function formatCurrency(n: number): string {
 
       <Transition name="alert-fade">
         <div v-if="budgetAlert" class="budget-alert" :class="{ urgent: budgetAlert.urgent }">
-          <span class="alert-icon">⚠️</span>
+          <img :src="alertIcon" class="alert-svg-icon" alt="alert" />
           <span class="alert-text">{{ budgetAlert.message }}</span>
         </div>
       </Transition>
@@ -252,7 +489,13 @@ function formatCurrency(n: number): string {
           </div>
         </div>
 
-        <FinanceChart v-model:view-mode="viewMode" />
+        <GenericChart
+          :series="financeSeries"
+          :view-mode="viewMode"
+          :yFormat="(v: number) => '$' + v.toLocaleString('es-MX')"
+          :dark-mode="isDark === 'dark'"
+          @update:view-mode="viewMode = $event"
+        />
       </div>
 
       <div class="view-toggle">
@@ -278,8 +521,66 @@ function formatCurrency(n: number): string {
 
     <FloatingActionButton :actions="fabActions" />
 
-    <SlidePanel :open="editPanel" :title="panelTitle" side="right" @close="editPanel = false">
-      <p class="panel-placeholder">Contenido del formulario</p>
+    <!-- ======================== ACCOUNT FORM (SLIDE PANEL) ======================== -->
+    <SlidePanel :open="editPanel" :title="panelTitle" side="right" @close="editPanel = false; editingAccount = null">
+      <div class="fin-form">
+        <label class="ff-field">
+          <span class="ff-label">Nombre</span>
+          <input v-model="acctFormName" type="text" class="ff-input" placeholder="Ej: Gasto diario" />
+        </label>
+
+        <label class="ff-field">
+          <span class="ff-label">Saldo</span>
+          <input v-model.number="acctFormBalance" type="number" class="ff-input" min="0" />
+        </label>
+
+        <label class="ff-field ff-advanced">
+          <label class="ff-check-wrap">
+            <input type="checkbox" v-model="acctFormAdvanced" class="ff-check-input" />
+            <span class="ff-check-mark"><img :src="checkIcon" class="check-svg-icon" alt="✓" /></span>
+            <span class="ff-check-label">Avanzado</span>
+          </label>
+        </label>
+
+        <div v-if="acctFormAdvanced" class="ff-derivations">
+          <span class="ff-label">Cuenta derivada de</span>
+          <div class="ff-deriv-list">
+            <div
+              v-for="item in acctFormDerivations"
+              :key="item.accountId"
+              class="ff-deriv-row"
+            >
+              <span class="ff-deriv-name" :style="{ color: accounts.find(a => a.id === item.accountId)?.color }">{{ item.name }}</span>
+              <div class="ff-deriv-controls">
+                <input v-model.number="item.pct" type="number" class="ff-input deriv-pct-input" min="0" max="100" />
+                <span class="ff-dist-pct">%</span>
+                <input type="range" min="0" max="100" v-model.number="item.pct" class="ff-range" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <label class="ff-field">
+          <span class="ff-label">Color</span>
+          <div class="ff-colors">
+            <button
+              v-for="c in accountColors"
+              :key="c"
+              class="ff-color-btn"
+              :style="{ background: c }"
+              :class="{ active: acctFormColor === c }"
+              @click="acctFormColor = c"
+            />
+          </div>
+        </label>
+
+        <div class="ff-actions">
+          <button class="ff-btn cancel" @click="editPanel = false; editingAccount = null">Cancelar</button>
+          <button class="ff-btn save" @click="saveAccount" :disabled="!acctFormName.trim()">
+            {{ editingAccount ? 'Guardar' : 'Crear' }}
+          </button>
+        </div>
+      </div>
     </SlidePanel>
 
     <SlidePanel :open="props.historyOpen" title="Historial" side="left" @close="emit('close-history')">
@@ -346,6 +647,83 @@ function formatCurrency(n: number): string {
         <div v-if="filteredHistory.length === 0" class="hist-empty">Sin resultados</div>
       </div>
     </SlidePanel>
+
+    <!-- ======================== TRANSACTION DIALOG ======================== -->
+    <Teleport to="body">
+      <div v-if="showTxDialog" class="tx-overlay" @click.self="showTxDialog = false">
+        <div class="tx-dialog">
+          <h3 class="tx-title">{{ txType === 'expense' ? 'Nuevo gasto' : 'Nuevo ingreso' }}</h3>
+
+          <label class="ff-field">
+            <span class="ff-label">Concepto</span>
+            <input v-model="txConcept" type="text" class="ff-input" placeholder="Ej: Supermercado" />
+          </label>
+
+          <label class="ff-field">
+            <span class="ff-label">Monto</span>
+            <input v-model.number="txAmount" type="number" class="ff-input" min="0" step="0.01" placeholder="0.00" />
+          </label>
+
+          <!-- Income: type selector -->
+          <div v-if="txType === 'income'" class="ff-field">
+            <span class="ff-label">Tipo de ingreso</span>
+            <div class="tx-type-toggle">
+              <button
+                v-for="t in incomeTypes"
+                :key="t"
+                :class="{ active: txIncomeType === t }"
+                @click="txIncomeType = t"
+              >{{ t }}</button>
+            </div>
+          </div>
+
+          <label v-if="txType === 'expense'" class="ff-field">
+            <span class="ff-label">Categoría</span>
+            <select v-model="txCategory" class="ff-select">
+              <option v-for="cat in txCategories" :key="cat" :value="cat">{{ cat }}</option>
+            </select>
+          </label>
+
+          <label class="ff-field">
+            <span class="ff-label">Cuenta</span>
+            <select v-model="txAccount" class="ff-select">
+              <option v-for="acct in accounts" :key="acct.id" :value="acct.name">{{ acct.name }}</option>
+            </select>
+          </label>
+
+          <!-- Income: derived accounts from this source -->
+          <div v-if="txType === 'income' && getDerivedAccounts().length > 0" class="ff-field">
+            <span class="ff-label">Cuentas derivadas</span>
+            <div class="tx-derived">
+              <div v-for="d in getDerivedAccounts()" :key="d.account.id" class="tx-derived-row">
+                <span class="tx-derived-name" :style="{ color: d.account.color }">{{ d.account.name }}</span>
+                <span class="tx-derived-pct">{{ d.pct }}%</span>
+                <span class="tx-derived-calc">${{ d.amount.toFixed(2) }}</span>
+                <input
+                  v-model.number="txDerivedAmounts[d.account.name]"
+                  type="number"
+                  class="ff-input derived-amt-input"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+            </div>
+          </div>
+
+          <label class="ff-field">
+            <span class="ff-label">Fecha</span>
+            <input v-model="txDate" type="date" class="ff-input" />
+          </label>
+
+          <div class="ff-actions">
+            <button class="ff-btn cancel" @click="showTxDialog = false">Cancelar</button>
+            <button class="ff-btn save" @click="saveTransaction" :disabled="!txConcept.trim() || txAmount <= 0 || (txType === 'expense' && !txAccount)">
+              Añadir
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -503,9 +881,12 @@ function formatCurrency(n: number): string {
   color: #c62828;
 }
 
-.alert-icon {
-  font-size: 18px;
+.alert-svg-icon {
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
+  display: block;
+  color: #e65100;
 }
 
 .section-heading {
@@ -689,10 +1070,365 @@ function formatCurrency(n: number): string {
   color: #ef5350;
 }
 
-.panel-placeholder {
+/* ======================== FINANCE FORM ======================== */
+
+.fin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0 4px 20px;
+}
+
+.ff-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ff-label {
+  font-size: 11px;
+  font-weight: 600;
   color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ff-input {
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.ff-input:focus {
+  border-color: var(--color-primary);
+}
+
+.ff-select {
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.ff-select:focus {
+  border-color: var(--color-primary);
+}
+
+.ff-colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ff-color-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ff-color-btn.active {
+  border-color: var(--color-text);
+  transform: scale(1.15);
+}
+
+.ff-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.ff-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.ff-btn.cancel {
+  background: var(--border-color);
+  color: var(--color-text);
+}
+
+.ff-btn.cancel:hover {
+  opacity: 0.8;
+}
+
+.ff-btn.save {
+  background: var(--color-primary, #00897b);
+  color: #fff;
+}
+
+.ff-btn.save:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.ff-btn.save:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ======================== TRANSACTION DIALOG ======================== */
+
+.tx-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.tx-dialog {
+  background: var(--color-surface);
+  border-radius: 16px;
+  padding: 24px;
+  width: 360px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+}
+
+.tx-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+/* ======================== ADVANCED CHECKBOX (ACCOUNT FORM) ======================== */
+
+.ff-advanced {
+  flex-direction: row !important;
+  align-items: center;
+  padding-top: 4px;
+}
+
+.ff-check-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ff-check-input {
+  display: none;
+}
+
+.ff-check-mark {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 2px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.ff-check-mark .check-svg-icon {
+  width: 14px;
+  height: 14px;
+  display: none;
+  color: #fff;
+}
+
+.ff-check-input:checked + .ff-check-mark {
+  background: var(--color-primary, #00897b);
+  border-color: var(--color-primary, #00897b);
+}
+
+.ff-check-input:checked + .ff-check-mark .check-svg-icon {
+  display: block;
+}
+
+.ff-check-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* ======================== DERIVATIONS LIST (ACCOUNT FORM) ======================== */
+
+.ff-derivations {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: var(--color-hover);
+  border-radius: 8px;
+}
+
+.ff-deriv-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.ff-deriv-list::-webkit-scrollbar {
+  width: 4px;
+}
+.ff-deriv-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ff-deriv-list::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 2px;
+}
+
+.ff-deriv-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ff-deriv-name {
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 70px;
+}
+
+.ff-deriv-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.deriv-pct-input {
+  width: 48px !important;
   text-align: center;
-  margin-top: 40px;
+}
+
+.ff-range {
+  flex: 1;
+  height: 4px;
+  appearance: none;
+  background: var(--border-color);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.ff-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-primary, #00897b);
+  cursor: pointer;
+  border: none;
+}
+
+.ff-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-primary, #00897b);
+  cursor: pointer;
+  border: none;
+}
+
+.ff-dist-pct {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  min-width: 10px;
+}
+
+/* ======================== INCOME TYPE TOGGLE ======================== */
+
+.tx-type-toggle {
+  display: flex;
+  gap: 4px;
+}
+
+.tx-type-toggle button {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.tx-type-toggle button.active {
+  background: var(--color-primary, #00897b);
+  border-color: var(--color-primary, #00897b);
+  color: #fff;
+}
+
+/* ======================== DERIVED ACCOUNTS (INCOME DIALOG) ======================== */
+
+.tx-derived {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: var(--color-hover);
+  border-radius: 8px;
+}
+
+.tx-derived-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tx-derived-name {
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 64px;
+}
+
+.tx-derived-pct {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  min-width: 24px;
+}
+
+.tx-derived-calc {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-sec, #888);
+  min-width: 52px;
+}
+
+.derived-amt-input {
+  width: 64px !important;
+  text-align: center;
+  margin-left: auto;
 }
 
 .history-filters {

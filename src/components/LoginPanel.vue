@@ -1,14 +1,21 @@
 <script setup lang="ts">
-/* Panel de inicio de sesión.
-   Contiene campos de email y contraseña con validación,
-   botón "Entrar" con estado de carga, y enlace a registro. */
 import { ref, computed } from 'vue'
 import { useLanguage } from '../composables/useLanguage'
 import { useAuthStore } from '../store/auth_store'
+import { useTheme } from '../composables/useTheme'
+import emailLight from '../assets/icons/clarity--email-light.svg'
+import emailDark from '../assets/icons/clarity--email-dark.svg'
+import lockLight from '../assets/icons/material-symbols-light--lock.svg'
+import lockDark from '../assets/icons/material-symbols-light--lock-outline.svg'
+import eyeOnLight from '../assets/icons/mdi--eye.svg'
+import eyeOnDark from '../assets/icons/mdi--eye-outline.svg'
+import eyeOffLight from '../assets/icons/mdi--eye-off.svg'
+import eyeOffDark from '../assets/icons/mdi--eye-off-outline.svg'
 
 const emit = defineEmits<{ switchToRegister: [] }>()
 
 const { t } = useLanguage()
+const { isDark } = useTheme()
 const auth = useAuthStore()
 
 const email = ref('')
@@ -53,8 +60,7 @@ function onRegisterClick(): void {
       <div class="field">
         <label for="login-email">{{ t('auth.email.label') }}</label>
         <div class="input-wrapper" :class="{ error: emailError }">
-          <!-- TODO: Reemplazar con icono Lucide Mail -->
-          <span class="input-icon icon-placeholder icon-mail"></span>
+          <img :src="isDark ? emailDark : emailLight" class="input-svg-icon" alt="" />
           <input
             id="login-email"
             v-model="email"
@@ -71,8 +77,7 @@ function onRegisterClick(): void {
       <div class="field">
         <label for="login-password">{{ t('auth.password.label') }}</label>
         <div class="input-wrapper" :class="{ error: passwordError }">
-          <!-- TODO: Reemplazar con icono Lucide Lock -->
-          <span class="input-icon icon-placeholder icon-lock"></span>
+          <img :src="isDark ? lockDark : lockLight" class="input-svg-icon" alt="" />
           <input
             id="login-password"
             v-model="password"
@@ -85,11 +90,16 @@ function onRegisterClick(): void {
             type="button"
             class="toggle-password"
             @click="showPassword = !showPassword"
-            :aria-label="showPassword ? 'Hide password' : 'Show password'"
+            :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
             tabindex="-1"
           >
-            <!-- TODO: Reemplazar con icono Lucide Eye / EyeOff -->
-            <span class="icon-placeholder icon-eye"></span>
+            <img
+              :src="showPassword
+                ? (isDark ? eyeOffDark : eyeOffLight)
+                : (isDark ? eyeOnDark : eyeOnLight)"
+              class="eye-svg-icon"
+              :alt="showPassword ? 'Ocultar' : 'Mostrar'"
+            />
           </button>
         </div>
         <span v-if="passwordError" class="field-error">{{ passwordError }}</span>
@@ -174,13 +184,20 @@ function onRegisterClick(): void {
   box-shadow: 0 0 0 3px rgba(229, 57, 53, 0.2);
 }
 
-.input-icon {
-  width: 24px;
-  height: 24px;
+.input-svg-icon {
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
-  background: var(--color-border);
-  border-radius: 50%;
+  display: block;
   opacity: 0.5;
+  color: currentColor;
+}
+
+.eye-svg-icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+  color: currentColor;
 }
 
 .input-wrapper input {
@@ -212,13 +229,6 @@ function onRegisterClick(): void {
 
 .toggle-password:hover {
   opacity: 1;
-}
-
-.toggle-password .icon-placeholder {
-  width: 20px;
-  height: 20px;
-  background: var(--color-border);
-  border-radius: 50%;
 }
 
 .field-error {

@@ -2,6 +2,12 @@
 import { ref } from 'vue'
 import { useTheme } from '../composables/useTheme'
 import { useLanguage } from '../composables/useLanguage'
+import walletIcon from '../assets/icons/mdi--wallet-bifold-outline.svg'
+import checkIcon from '../assets/icons/mdi--check-bold.svg'
+import gymIcon from '../assets/icons/healthicons--gym-outline.svg'
+import historyIcon from '../assets/icons/si--book-line.svg'
+import sunIcon from '../assets/icons/tabler--sun-high-filled.svg'
+import moonIcon from '../assets/icons/stash--moon-solid.svg'
 
 export type Section = 'finanzas' | 'habitos' | 'fitness'
 
@@ -16,7 +22,7 @@ const emit = defineEmits<{
 }>()
 
 const { toggle: toggleTheme, isDark } = useTheme()
-const { t } = useLanguage()
+useLanguage()
 
 const menuOpen = ref(false)
 
@@ -27,9 +33,9 @@ const sectionTitle: Record<Section, string> = {
 }
 
 const tabs: { key: Section; icon: string; label: string }[] = [
-  { key: 'finanzas', icon: '💰', label: 'Finanzas' },
-  { key: 'habitos', icon: '✅', label: 'Hábitos' },
-  { key: 'fitness', icon: '💪', label: 'Fitness' },
+  { key: 'finanzas', icon: walletIcon, label: 'Finanzas' },
+  { key: 'habitos', icon: checkIcon, label: 'Hábitos' },
+  { key: 'fitness', icon: gymIcon, label: 'Fitness' },
 ]
 
 function initial(name: string): string {
@@ -50,7 +56,7 @@ function closeMenu(): void {
     <header class="top-bar">
       <div class="top-left">
         <button v-if="section === 'finanzas'" class="history-btn" @click="emit('open-history')">
-          🕐
+          <img :src="historyIcon" class="nav-svg-icon" alt="history" />
         </button>
         <span class="section-title">{{ sectionTitle[section] }}</span>
       </div>
@@ -61,7 +67,7 @@ function closeMenu(): void {
             <div v-if="menuOpen" class="avatar-menu" @click.stop>
               <div class="menu-header">
                 <span class="menu-user-name">{{ userName }}</span>
-                <button class="menu-close" @click="closeMenu">✕</button>
+                <button class="menu-close" @click="closeMenu">×</button>
               </div>
               <div class="menu-body">
                 <button class="menu-item" @click="closeMenu">Perfil</button>
@@ -69,7 +75,7 @@ function closeMenu(): void {
               </div>
               <div class="menu-footer">
                 <button class="theme-toggle-inline" @click="toggleTheme">
-                  <span class="theme-icon">{{ isDark ? '☀️' : '🌙' }}</span>
+                  <img :src="isDark ? sunIcon : moonIcon" class="theme-svg-icon" alt="theme" />
                   <span>{{ isDark ? 'Modo claro' : 'Modo oscuro' }}</span>
                 </button>
               </div>
@@ -91,7 +97,7 @@ function closeMenu(): void {
         :class="{ active: section === tab.key }"
         @click="emit('update:section', tab.key)"
       >
-        <span class="nav-icon">{{ tab.icon }}</span>
+        <img :src="tab.icon" class="nav-svg-icon" :alt="tab.label" />
         <span class="nav-label">{{ tab.label }}</span>
       </button>
     </nav>
@@ -130,10 +136,10 @@ function closeMenu(): void {
 .history-btn {
   background: none;
   border: none;
-  font-size: 22px;
   cursor: pointer;
   padding: 4px;
-  line-height: 1;
+  display: flex;
+  align-items: center;
   color: var(--color-text-secondary);
   transition: color 0.2s;
   font-family: inherit;
@@ -141,6 +147,11 @@ function closeMenu(): void {
 
 .history-btn:hover {
   color: var(--color-primary);
+}
+
+.history-btn .nav-svg-icon {
+  width: 22px;
+  height: 22px;
 }
 
 .section-title {
@@ -306,9 +317,18 @@ function closeMenu(): void {
   color: var(--color-primary);
 }
 
-.nav-icon {
-  font-size: 22px;
-  line-height: 1;
+.nav-svg-icon {
+  width: 22px;
+  height: 22px;
+  display: block;
+  color: currentColor;
+}
+
+.theme-svg-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+  color: currentColor;
 }
 
 .nav-label {
@@ -334,8 +354,9 @@ function closeMenu(): void {
     width: 200px;
     right: -8px;
   }
-  .nav-icon {
-    font-size: 20px;
+  .nav-svg-icon {
+    width: 20px;
+    height: 20px;
   }
   .nav-label {
     font-size: 10px;

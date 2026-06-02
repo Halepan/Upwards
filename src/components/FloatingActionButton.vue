@@ -34,7 +34,10 @@ defineExpose({ expanded })
         class="fab-option"
         @click="runAction(act)"
       >
-        <span class="fab-opt-icon">{{ act.icon }}</span>
+        <span class="fab-opt-icon">
+          <img v-if="act.icon.endsWith('.svg')" :src="act.icon" class="fab-icon-img" />
+          <span v-else>{{ act.icon }}</span>
+        </span>
         <span class="fab-opt-label">{{ act.label }}</span>
       </button>
     </TransitionGroup>
@@ -44,7 +47,7 @@ defineExpose({ expanded })
       @click="toggle"
       :class="{ expanded }"
     >
-      <span class="fab-plus">{{ expanded ? '✕' : '+' }}</span>
+      <span class="fab-plus">{{ expanded ? '×' : '+' }}</span>
     </button>
   </div>
 </template>
@@ -93,6 +96,15 @@ defineExpose({ expanded })
 
 .fab-opt-icon {
   font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fab-icon-img {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 .fab-opt-label {

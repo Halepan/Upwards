@@ -1,12 +1,12 @@
 <script setup lang="ts">
-/* Selector de idioma desplegable.
-   Muestra un globo + código del idioma activo.
-   Solo "Español" e "Inglés" están activos; el resto aparecen
-   deshabilitados en gris. Cada idioma lleva su bandera. */
 import { ref } from 'vue'
 import { useLanguage, type SupportedLang } from '../composables/useLanguage'
+import { useTheme } from '../composables/useTheme'
+import worldLight from '../assets/icons/subway--world-light.svg'
+import worldDark from '../assets/icons/subway--world-dark.svg'
 
 const { lang, setLang, t } = useLanguage()
+const { isDark } = useTheme()
 const isOpen = ref(false)
 
 interface LanguageOption {
@@ -46,8 +46,7 @@ function close(): void {
 <template>
   <div class="language-selector" @mouseleave="close">
     <button class="trigger" @click="toggle" :aria-label="t('language.label')">
-      <!-- TODO: Reemplazar con icono Lucide Globe -->
-      <span class="icon-placeholder icon-globe"></span>
+      <img :src="isDark ? worldDark : worldLight" class="world-icon" alt="" />
       <span class="code">{{ lang.toUpperCase() }}</span>
       <span class="chevron" :class="{ up: isOpen }">▾</span>
     </button>
@@ -93,11 +92,11 @@ function close(): void {
   box-shadow: var(--shadow-md);
 }
 
-.icon-placeholder {
+.world-icon {
   width: 16px;
   height: 16px;
-  background: var(--color-border);
-  border-radius: 50%;
+  display: block;
+  color: currentColor;
 }
 
 .code {
