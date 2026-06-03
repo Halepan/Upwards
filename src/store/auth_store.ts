@@ -160,9 +160,9 @@ export const useAuthStore = defineStore('auth', () => {
     console.log('[Auth] Dev bypass — login automático activado')
   }
 
-  if (import.meta.env.DEV) {
-    devBypassLogin()
-  }
+//  if (import.meta.env.DEV) {
+//    devBypassLogin()
+//  }
 
   return {
     currentUser,

@@ -1,13 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useTheme } from '../composables/useTheme'
 import { useLanguage } from '../composables/useLanguage'
-import walletIcon from '../assets/icons/mdi--wallet-bifold-outline.svg'
-import checkIcon from '../assets/icons/mdi--check-bold.svg'
-import gymIcon from '../assets/icons/healthicons--gym-outline.svg'
-import historyIcon from '../assets/icons/si--book-line.svg'
-import sunIcon from '../assets/icons/tabler--sun-high-filled.svg'
-import moonIcon from '../assets/icons/stash--moon-solid.svg'
+import { themeIcons, themeColors } from '../config/theme.config'
 
 export type Section = 'finanzas' | 'habitos' | 'fitness'
 
@@ -24,6 +19,17 @@ const emit = defineEmits<{
 const { toggle: toggleTheme, isDark } = useTheme()
 useLanguage()
 
+// Colores reactivos desde theme.config.ts
+const currentColors = computed(() =>
+  isDark.value ? themeColors.dark : themeColors.light
+)
+const primaryColor = computed(() => currentColors.value.primary)
+const surfaceColor = computed(() => currentColors.value.surface)
+const textColor = computed(() => currentColors.value.text)
+const textSecondaryColor = computed(() => currentColors.value.textSecondary)
+const borderColor = computed(() => currentColors.value.border)
+const hoverColor = computed(() => currentColors.value.hover)
+
 const menuOpen = ref(false)
 
 const sectionTitle: Record<Section, string> = {
@@ -32,10 +38,10 @@ const sectionTitle: Record<Section, string> = {
   fitness: 'Fitness',
 }
 
-const tabs: { key: Section; icon: string; label: string }[] = [
-  { key: 'finanzas', icon: walletIcon, label: 'Finanzas' },
-  { key: 'habitos', icon: checkIcon, label: 'Hábitos' },
-  { key: 'fitness', icon: gymIcon, label: 'Fitness' },
+const tabs: { key: Section; icon: { light: string; dark: string }; label: string }[] = [
+  { key: 'finanzas', icon: themeIcons.wallet, label: 'Finanzas' },
+  { key: 'habitos', icon: themeIcons.check, label: 'Hábitos' },
+  { key: 'fitness', icon: themeIcons.gym, label: 'Fitness' },
 ]
 
 function initial(name: string): string {
@@ -52,30 +58,95 @@ function closeMenu(): void {
 </script>
 
 <template>
-  <div class="shell">
-    <header class="top-bar">
+  <div
+    class="shell"
+    :style="{ backgroundColor: currentColors.background }"
+  >
+    <header
+      class="top-bar"
+      :style="{
+        backgroundColor: surfaceColor,
+        borderBottomColor: borderColor
+      }"
+    >
       <div class="top-left">
-        <button v-if="section === 'finanzas'" class="history-btn" @click="emit('open-history')">
-          <img :src="historyIcon" class="nav-svg-icon" alt="history" />
+        <button
+          v-if="section === 'finanzas'"
+          class="history-btn"
+          @click="emit('open-history')"
+          :style="{ color: textSecondaryColor }"
+        >
+          <img
+            :src="isDark ? themeIcons.book.dark : themeIcons.book.light"
+            class="nav-svg-icon"
+            alt="history"
+          />
         </button>
-        <span class="section-title">{{ sectionTitle[section] }}</span>
+        <span class="section-title" :style="{ color: textColor }">
+          {{ sectionTitle[section] }}
+        </span>
       </div>
       <div class="top-right">
         <div class="avatar-wrapper">
-          <button class="avatar" @click="toggleMenu">{{ initial(userName) }}</button>
+          <button
+            class="avatar"
+            @click="toggleMenu"
+            :style="{ backgroundColor: primaryColor }"
+          >
+            {{ initial(userName) }}
+          </button>
           <Transition name="menu-fade">
-            <div v-if="menuOpen" class="avatar-menu" @click.stop>
-              <div class="menu-header">
-                <span class="menu-user-name">{{ userName }}</span>
-                <button class="menu-close" @click="closeMenu">×</button>
+            <div
+              v-if="menuOpen"
+              class="avatar-menu"
+              @click.stop
+              :style="{
+                backgroundColor: surfaceColor,
+                borderColor: borderColor
+              }"
+            >
+              <div class="menu-header" :style="{ borderBottomColor: borderColor }">
+                <span class="menu-user-name" :style="{ color: textColor }">
+                  {{ userName }}
+                </span>
+                <button
+                  class="menu-close"
+                  @click="closeMenu"
+                  :style="{ color: textSecondaryColor }"
+                >
+                  ×
+                </button>
               </div>
               <div class="menu-body">
-                <button class="menu-item" @click="closeMenu">Perfil</button>
-                <button class="menu-item" @click="closeMenu">Configuración</button>
+                <button
+                  class="menu-item"
+                  @click="closeMenu"
+                  :style="{ color: textColor }"
+                >
+                  Perfil
+                </button>
+                <button
+                  class="menu-item"
+                  @click="closeMenu"
+                  :style="{ color: textColor }"
+                >
+                  Configuración
+                </button>
               </div>
-              <div class="menu-footer">
-                <button class="theme-toggle-inline" @click="toggleTheme">
-                  <img :src="isDark ? sunIcon : moonIcon" class="theme-svg-icon" alt="theme" />
+              <div class="menu-footer" :style="{ borderTopColor: borderColor }">
+                <button
+                  class="theme-toggle-inline"
+                  @click="toggleTheme"
+                  :style="{
+                    backgroundColor: hoverColor,
+                    color: textColor
+                  }"
+                >
+                  <img
+                    :src="isDark ? themeIcons.sun.light : themeIcons.moon.dark"
+                    class="theme-svg-icon"
+                    alt="theme"
+                  />
                   <span>{{ isDark ? 'Modo claro' : 'Modo oscuro' }}</span>
                 </button>
               </div>
@@ -89,7 +160,13 @@ function closeMenu(): void {
       <slot />
     </main>
 
-    <nav class="bottom-nav">
+    <nav
+      class="bottom-nav"
+      :style="{
+        backgroundColor: surfaceColor,
+        borderTopColor: borderColor
+      }"
+    >
       <button
         v-for="tab in tabs"
         :key="tab.key"
@@ -97,8 +174,24 @@ function closeMenu(): void {
         :class="{ active: section === tab.key }"
         @click="emit('update:section', tab.key)"
       >
-        <img :src="tab.icon" class="nav-svg-icon" :alt="tab.label" />
-        <span class="nav-label">{{ tab.label }}</span>
+        <img
+          :src="section === tab.key
+            ? (isDark ? tab.icon.dark : tab.icon.light)
+            : (isDark ? tab.icon.dark : tab.icon.light)"
+          class="nav-svg-icon"
+          :alt="tab.label"
+          :style="{
+            color: section === tab.key ? primaryColor : textSecondaryColor
+          }"
+        />
+        <span
+          class="nav-label"
+          :style="{
+            color: section === tab.key ? primaryColor : textSecondaryColor
+          }"
+        >
+          {{ tab.label }}
+        </span>
       </button>
     </nav>
   </div>
@@ -109,7 +202,7 @@ function closeMenu(): void {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  background: var(--color-bg);
+  transition: background 0.3s;
 }
 
 .top-bar {
@@ -122,9 +215,9 @@ function closeMenu(): void {
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid;
   z-index: 50;
+  transition: background 0.3s, border-color 0.3s;
 }
 
 .top-left {
@@ -140,13 +233,8 @@ function closeMenu(): void {
   padding: 4px;
   display: flex;
   align-items: center;
-  color: var(--color-text-secondary);
   transition: color 0.2s;
   font-family: inherit;
-}
-
-.history-btn:hover {
-  color: var(--color-primary);
 }
 
 .history-btn .nav-svg-icon {
@@ -157,7 +245,6 @@ function closeMenu(): void {
 .section-title {
   font-size: 20px;
   font-weight: 700;
-  color: var(--color-text);
 }
 
 .top-right {
@@ -173,7 +260,6 @@ function closeMenu(): void {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: var(--color-primary);
   color: var(--color-on-primary);
   display: flex;
   align-items: center;
@@ -195,10 +281,9 @@ function closeMenu(): void {
   top: calc(100% + 8px);
   right: 0;
   width: 220px;
-  background: var(--color-surface);
   border-radius: var(--border-radius-md);
   box-shadow: var(--shadow-lg);
-  border: 1px solid var(--color-border);
+  border: 1px solid;
   z-index: 100;
   overflow: hidden;
 }
@@ -208,13 +293,12 @@ function closeMenu(): void {
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid;
 }
 
 .menu-user-name {
   font-weight: 600;
   font-size: 14px;
-  color: var(--color-text);
 }
 
 .menu-close {
@@ -222,7 +306,6 @@ function closeMenu(): void {
   border: none;
   font-size: 16px;
   cursor: pointer;
-  color: var(--color-text-secondary);
   padding: 2px;
   font-family: inherit;
   line-height: 1;
@@ -239,7 +322,6 @@ function closeMenu(): void {
   background: none;
   text-align: left;
   font-size: 14px;
-  color: var(--color-text);
   cursor: pointer;
   font-family: inherit;
   transition: background 0.15s;
@@ -250,7 +332,7 @@ function closeMenu(): void {
 }
 
 .menu-footer {
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid;
   padding: 8px 12px;
 }
 
@@ -262,9 +344,7 @@ function closeMenu(): void {
   padding: 8px 12px;
   border: none;
   border-radius: var(--border-radius-sm);
-  background: var(--color-hover);
   font-size: 13px;
-  color: var(--color-text);
   cursor: pointer;
   font-family: inherit;
   transition: background 0.2s;
@@ -272,10 +352,6 @@ function closeMenu(): void {
 
 .theme-toggle-inline:hover {
   opacity: 0.85;
-}
-
-.theme-icon {
-  font-size: 16px;
 }
 
 .shell-content {
@@ -292,9 +368,9 @@ function closeMenu(): void {
   right: 0;
   height: 64px;
   display: flex;
-  background: var(--color-surface);
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid;
   z-index: 50;
+  transition: background 0.3s, border-color 0.3s;
 }
 
 .nav-tab {
@@ -306,29 +382,22 @@ function closeMenu(): void {
   gap: 2px;
   border: none;
   background: transparent;
-  color: var(--color-text-secondary);
   font-family: inherit;
   cursor: pointer;
   transition: color 0.2s;
   padding: 4px;
 }
 
-.nav-tab.active {
-  color: var(--color-primary);
-}
-
 .nav-svg-icon {
   width: 22px;
   height: 22px;
   display: block;
-  color: currentColor;
 }
 
 .theme-svg-icon {
   width: 16px;
   height: 16px;
   display: block;
-  color: currentColor;
 }
 
 .nav-label {
