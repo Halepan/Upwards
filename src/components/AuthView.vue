@@ -1,8 +1,5 @@
 <script setup lang="ts">
-/* Componente principal de autenticación.
-   Contiene el logo, selector de idioma, toggle de tema, indicador de conexión
-   y los paneles de login/registro con transición deslizante. */
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import ThemeToggle from './ThemeToggle.vue'
 import LanguageSelector from './LanguageSelector.vue'
 import ConnectionIndicator from './ConnectionIndicator.vue'
@@ -10,28 +7,38 @@ import LoginPanel from './LoginPanel.vue'
 import RegisterPanel from './RegisterPanel.vue'
 import { useLanguage } from '../composables/useLanguage'
 import { useTheme } from '../composables/useTheme'
-import lightIcon from '../assets/icons/lighticon.svg'
-import darkIcon from '../assets/icons/blackicon.svg'
+import { themeIcons, themeColors } from '../config/theme.config'
 
 const { lang } = useLanguage()
 const { isDark } = useTheme()
 
+const currentColors = computed(() =>
+  isDark.value ? themeColors.dark : themeColors.light
+)
+
 const panel = ref<'login' | 'register'>('login')
 const transitionDirection = ref<'left' | 'right'>('left')
 
-function switchToRegister(): void {
+function switchToRegister() {
   transitionDirection.value = 'right'
   panel.value = 'register'
 }
 
-function switchToLogin(): void {
+function switchToLogin() {
   transitionDirection.value = 'left'
   panel.value = 'login'
 }
 </script>
 
 <template>
-  <div class="auth-view" :key="lang">
+  <div
+    class="auth-view"
+    :key="lang"
+    :style="{
+      backgroundColor: currentColors.background,
+      color: currentColors.text
+    }"
+  >
     <div class="top-bar">
       <ThemeToggle />
       <ConnectionIndicator />
@@ -42,13 +49,15 @@ function switchToLogin(): void {
       <div class="auth-header">
         <h1 class="app-name">
           <img
-            :src="isDark ? darkIcon : lightIcon"
+            :src="isDark ? themeIcons.logo.dark : themeIcons.logo.light"
             alt="U"
             class="logo-u-img"
           />
           PWARDS
         </h1>
-        <p class="tagline">Crece cada día</p>
+        <p class="tagline" :style="{ color: currentColors.textSecondary }">
+          Crece cada día
+        </p>
       </div>
 
       <div class="panel-stage">
@@ -76,8 +85,7 @@ function switchToLogin(): void {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: var(--color-bg);
-  transition: background 0.3s ease;
+  transition: background 0.3s, color 0.3s;
   position: relative;
 }
 
@@ -114,9 +122,8 @@ function switchToLogin(): void {
 .app-name {
   margin: 0;
   font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
-  font-size: 40px;
+  font-size: 39px;
   font-weight: 700;
-  color: var(--color-text);
   letter-spacing: 1px;
   display: flex;
   align-items: center;
@@ -124,12 +131,14 @@ function switchToLogin(): void {
   gap: 0;
 }
 
+/* Logo ajustado: 3 píxeles más ancho, más pegado al texto */
 .logo-u-img {
-  width: 40px;
-  height: 40px;
+  width: 60px;                /* antes 52px, ahora 55px (+3px) */
+  height: 60px;
   flex-shrink: 0;
-  margin-right: 2px;
+  margin-right: -20px;        /* mayor solapamiento para eliminar espacio */
   object-fit: contain;
+  transform: translateX(-6px); /* ajuste fino adicional */
 }
 
 .tagline {
@@ -137,7 +146,6 @@ function switchToLogin(): void {
   font-size: 14px;
   font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
   font-weight: 400;
-  color: var(--color-text-secondary);
   opacity: 0.8;
   letter-spacing: 2.5px;
   transform: scaleX(1.05);
@@ -147,6 +155,7 @@ function switchToLogin(): void {
 .panel-stage {
   width: 100%;
   overflow: hidden;
+  
 }
 
 /* Transiciones deslizantes */

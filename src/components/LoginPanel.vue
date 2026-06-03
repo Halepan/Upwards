@@ -3,20 +3,31 @@ import { ref, computed } from 'vue'
 import { useLanguage } from '../composables/useLanguage'
 import { useAuthStore } from '../store/auth_store'
 import { useTheme } from '../composables/useTheme'
-import emailLight from '../assets/icons/clarity--email-light.svg'
-import emailDark from '../assets/icons/clarity--email-dark.svg'
-import lockLight from '../assets/icons/material-symbols-light--lock.svg'
-import lockDark from '../assets/icons/material-symbols-light--lock-outline.svg'
-import eyeOnLight from '../assets/icons/mdi--eye.svg'
-import eyeOnDark from '../assets/icons/mdi--eye-outline.svg'
-import eyeOffLight from '../assets/icons/mdi--eye-off.svg'
-import eyeOffDark from '../assets/icons/mdi--eye-off-outline.svg'
+import { themeIcons, themeColors } from '../config/theme.config'
 
 const emit = defineEmits<{ switchToRegister: [] }>()
 
 const { t } = useLanguage()
 const { isDark } = useTheme()
 const auth = useAuthStore()
+
+// Colores reactivos desde theme.config.ts
+const currentColors = computed(() =>
+  isDark.value ? themeColors.dark : themeColors.light
+)
+const primaryColor = computed(() => currentColors.value.primary)
+const surfaceColor = computed(() => currentColors.value.surface)
+const textColor = computed(() => currentColors.value.text)
+const textSecondaryColor = computed(() => currentColors.value.textSecondary)
+const borderColor = computed(() => currentColors.value.border)
+const inputBgColor = computed(() => currentColors.value.inputBg)
+
+// Sombra NEGRA intensa (visible en cualquier fondo)
+const panelShadow = computed(() =>
+  isDark.value
+    ? '0 12px 40px rgba(0, 0, 0, 0.6)'   // modo oscuro: más opacidad
+    : '0 12px 40px rgba(0, 0, 0, 0.25)'  // modo claro: sombra negra marcada
+)
 
 const email = ref('')
 const password = ref('')
@@ -52,15 +63,28 @@ function onRegisterClick(): void {
 </script>
 
 <template>
-  <div class="login-panel">
-    <h2 class="panel-title">{{ t('auth.login.title') }}</h2>
+  <div
+    class="login-panel"
+    :style="{
+      backgroundColor: surfaceColor,
+      color: textColor,
+      boxShadow: panelShadow
+    }"
+  >
+    <h2 class="panel-title" :style="{ color: textColor }">
+      {{ t('auth.login.title') }}
+    </h2>
 
     <form class="auth-form" @submit.prevent="handleSubmit" novalidate>
       <!-- Email -->
       <div class="field">
-        <label for="login-email">{{ t('auth.email.label') }}</label>
-        <div class="input-wrapper" :class="{ error: emailError }">
-          <img :src="isDark ? emailDark : emailLight" class="input-svg-icon" alt="" />
+        <label for="login-email" :style="{ color: textSecondaryColor }">
+          {{ t('auth.email.label') }}
+        </label>
+        <div class="input-wrapper" :class="{ error: emailError }" :style="{ borderColor: borderColor, backgroundColor: inputBgColor }">
+          <span class="icon-circle" :style="{ backgroundColor: isDark ? primaryColor : 'transparent' }">
+            <img :src="isDark ? themeIcons.email.dark : themeIcons.email.light" class="input-svg-icon" alt="" />
+          </span>
           <input
             id="login-email"
             v-model="email"
@@ -68,6 +92,7 @@ function onRegisterClick(): void {
             :placeholder="t('auth.email.placeholder')"
             autocomplete="email"
             @blur="touched.email = true"
+            :style="{ color: textColor }"
           />
         </div>
         <span v-if="emailError" class="field-error">{{ emailError }}</span>
@@ -75,9 +100,13 @@ function onRegisterClick(): void {
 
       <!-- Contraseña -->
       <div class="field">
-        <label for="login-password">{{ t('auth.password.label') }}</label>
-        <div class="input-wrapper" :class="{ error: passwordError }">
-          <img :src="isDark ? lockDark : lockLight" class="input-svg-icon" alt="" />
+        <label for="login-password" :style="{ color: textSecondaryColor }">
+          {{ t('auth.password.label') }}
+        </label>
+        <div class="input-wrapper" :class="{ error: passwordError }" :style="{ borderColor: borderColor, backgroundColor: inputBgColor }">
+          <span class="icon-circle" :style="{ backgroundColor: isDark ? primaryColor : 'transparent' }">
+            <img :src="isDark ? themeIcons.lock.dark : themeIcons.lock.light" class="input-svg-icon" alt="" />
+          </span>
           <input
             id="login-password"
             v-model="password"
@@ -85,6 +114,7 @@ function onRegisterClick(): void {
             :placeholder="t('auth.password.placeholder')"
             autocomplete="current-password"
             @blur="touched.password = true"
+            :style="{ color: textColor }"
           />
           <button
             type="button"
@@ -93,13 +123,15 @@ function onRegisterClick(): void {
             :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
             tabindex="-1"
           >
-            <img
-              :src="showPassword
-                ? (isDark ? eyeOffDark : eyeOffLight)
-                : (isDark ? eyeOnDark : eyeOnLight)"
-              class="eye-svg-icon"
-              :alt="showPassword ? 'Ocultar' : 'Mostrar'"
-            />
+            <span class="icon-circle" :style="{ backgroundColor: isDark ? primaryColor : 'transparent' }">
+              <img
+                :src="showPassword
+                  ? (isDark ? themeIcons.eyeOff.dark : themeIcons.eyeOff.light)
+                  : (isDark ? themeIcons.eyeOn.dark : themeIcons.eyeOn.light)"
+                class="eye-svg-icon"
+                :alt="showPassword ? 'Ocultar' : 'Mostrar'"
+              />
+            </span>
           </button>
         </div>
         <span v-if="passwordError" class="field-error">{{ passwordError }}</span>
@@ -111,14 +143,16 @@ function onRegisterClick(): void {
       </Transition>
 
       <!-- Botón -->
-      <button type="submit" class="btn-primary" :disabled="auth.isLoading || !isValid">
+      <button type="submit" class="btn-primary" :disabled="auth.isLoading || !isValid" :style="{ backgroundColor: primaryColor }">
         {{ auth.isLoading ? t('auth.loading') : t('auth.login.button') }}
       </button>
     </form>
 
-    <p class="switch-link">
+    <p class="switch-link" :style="{ color: textSecondaryColor }">
       {{ t('auth.login.noAccount') }}
-      <button class="link" @click="onRegisterClick">{{ t('auth.login.registerLink') }}</button>
+      <button class="link" @click="onRegisterClick" :style="{ color: primaryColor }">
+        {{ t('auth.login.registerLink') }}
+      </button>
     </p>
   </div>
 </template>
@@ -128,17 +162,15 @@ function onRegisterClick(): void {
   width: 100%;
   max-width: 400px;
   padding: 32px;
-  background: var(--color-surface);
   border-radius: 16px;
-  box-shadow: var(--shadow-lg);
   box-sizing: border-box;
+  transition: background 0.3s, color 0.3s, box-shadow 0.3s;
 }
 
 .panel-title {
   margin: 0 0 24px;
   font-size: 24px;
   font-weight: 600;
-  color: var(--color-text);
   text-align: center;
 }
 
@@ -157,7 +189,6 @@ function onRegisterClick(): void {
 .field label {
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-text-secondary);
 }
 
 .input-wrapper {
@@ -166,8 +197,7 @@ function onRegisterClick(): void {
   gap: 8px;
   padding: 0 12px;
   border-radius: 50px;
-  border: 1px solid var(--color-border);
-  background: var(--color-input-bg);
+  border: 1px solid;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -184,20 +214,24 @@ function onRegisterClick(): void {
   box-shadow: 0 0 0 3px rgba(229, 57, 53, 0.2);
 }
 
-.input-svg-icon {
-  width: 20px;
-  height: 20px;
+/* Círculo de fondo para iconos (amarillo en modo oscuro, transparente en claro) */
+.icon-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  display: block;
-  opacity: 0.5;
-  color: currentColor;
+  transition: background-color 0.3s ease;
 }
 
+.input-svg-icon,
 .eye-svg-icon {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   display: block;
-  color: currentColor;
+  opacity: 0.8;
 }
 
 .input-wrapper input {
@@ -207,7 +241,6 @@ function onRegisterClick(): void {
   background: transparent;
   padding: 12px 0;
   font-size: 15px;
-  color: var(--color-text);
   font-family: inherit;
 }
 
@@ -219,11 +252,11 @@ function onRegisterClick(): void {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.5;
+  opacity: 0.7;
   transition: opacity 0.2s ease;
 }
 
@@ -252,17 +285,16 @@ function onRegisterClick(): void {
   height: 48px;
   border: none;
   border-radius: 50px;
-  background: var(--color-primary);
-  color: var(--color-on-primary);
+  color: white;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.3s ease, box-shadow 0.3s ease;
+  transition: opacity 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
   font-family: inherit;
 }
 
 .btn-primary:hover:not(:disabled) {
-  box-shadow: 0 4px 12px var(--color-primary-alpha);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
 }
 
 .btn-primary:disabled {
@@ -274,13 +306,11 @@ function onRegisterClick(): void {
   margin: 20px 0 0;
   text-align: center;
   font-size: 14px;
-  color: var(--color-text-secondary);
 }
 
 .link {
   background: none;
   border: none;
-  color: var(--color-primary);
   font-weight: 600;
   cursor: pointer;
   text-decoration: underline;

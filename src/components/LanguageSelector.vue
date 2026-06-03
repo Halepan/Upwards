@@ -1,13 +1,20 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useLanguage, type SupportedLang } from '../composables/useLanguage'
 import { useTheme } from '../composables/useTheme'
+import { themeColors } from '../config/theme.config'
 import worldLight from '../assets/icons/subway--world-light.svg'
 import worldDark from '../assets/icons/subway--world-dark.svg'
 
 const { lang, setLang, t } = useLanguage()
 const { isDark } = useTheme()
 const isOpen = ref(false)
+
+// Color primario reactivo desde theme.config.ts
+const currentColors = computed(() =>
+  isDark.value ? themeColors.dark : themeColors.light
+)
+const primaryColor = computed(() => currentColors.value.primary)
 
 interface LanguageOption {
   code: string
@@ -45,7 +52,16 @@ function close(): void {
 
 <template>
   <div class="language-selector" @mouseleave="close">
-    <button class="trigger" @click="toggle" :aria-label="t('language.label')">
+    <button
+      class="trigger"
+      @click="toggle"
+      :aria-label="t('language.label')"
+      :style="{
+        backgroundColor: primaryColor,
+        borderColor: primaryColor,
+        color: 'white'
+      }"
+    >
       <img :src="isDark ? worldDark : worldLight" class="world-icon" alt="" />
       <span class="code">{{ lang.toUpperCase() }}</span>
       <span class="chevron" :class="{ up: isOpen }">▾</span>
@@ -79,13 +95,12 @@ function close(): void {
   gap: 4px;
   padding: 6px 12px;
   border-radius: 8px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text);
+  border: 1px solid;
   cursor: pointer;
   font-size: 14px;
   box-shadow: var(--shadow-sm);
-  transition: background 0.3s ease, box-shadow 0.3s ease;
+  transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  font-family: inherit;
 }
 
 .trigger:hover {
@@ -96,7 +111,7 @@ function close(): void {
   width: 16px;
   height: 16px;
   display: block;
-  color: currentColor;
+  /* Al ser SVG, el color se hereda del padre (blanco) */
 }
 
 .code {
@@ -151,15 +166,6 @@ function close(): void {
 
 .dropdown li.active {
   font-weight: 600;
-}
-
-.dropdown-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 99;
 }
 
 .flag {

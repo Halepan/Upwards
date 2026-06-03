@@ -1,31 +1,42 @@
 import { ref, watch } from 'vue'
+import { themeColors } from '../config/theme.config'
 
-const THEME_STORAGE_KEY = 'upwards-theme'
+const isDark = ref(localStorage.getItem('upwards-theme') === 'dark')
 
-type Theme = 'light' | 'dark'
+function applyTheme(dark: boolean) {
+  const colors = dark ? themeColors.dark : themeColors.light
+  const root = document.documentElement
+  root.style.setProperty('--color-primary', colors.primary)
+  root.style.setProperty('--color-primary-alpha', colors.primaryAlpha)
+  root.style.setProperty('--color-bg', colors.background)
+  root.style.setProperty('--color-surface', colors.surface)
+  root.style.setProperty('--color-text', colors.text)
+  root.style.setProperty('--color-text-secondary', colors.textSecondary)
+  root.style.setProperty('--color-border', colors.border)
+  root.style.setProperty('--color-input-bg', colors.inputBg)
+  root.style.setProperty('--color-hover', colors.hover)
 
-const currentTheme = ref<Theme>(
-  (localStorage.getItem(THEME_STORAGE_KEY) as Theme) ?? 'light'
-)
-
-/* Aplica las clases CSS al root y persiste en localStorage. */
-function applyTheme(theme: Theme): void {
-  document.documentElement.classList.toggle('dark', theme === 'dark')
-  localStorage.setItem(THEME_STORAGE_KEY, theme)
+  // Clase para CSS adicional
+  if (dark) {
+    root.classList.add('dark')
+  } else {
+    root.classList.remove('dark')
+  }
 }
 
-applyTheme(currentTheme.value)
+// Aplicar al iniciar
+applyTheme(isDark.value)
 
-watch(currentTheme, applyTheme)
+// Guardar en localStorage y aplicar al cambiar
+watch(isDark, (val) => {
+  localStorage.setItem('upwards-theme', val ? 'dark' : 'light')
+  applyTheme(val)
+})
 
 export function useTheme() {
-  function toggle(): void {
-    currentTheme.value = currentTheme.value === 'light' ? 'dark' : 'light'
+  function toggle() {
+    isDark.value = !isDark.value
   }
 
-  return {
-    theme: currentTheme,
-    isDark: currentTheme,
-    toggle,
-  }
+  return { isDark, toggle }
 }

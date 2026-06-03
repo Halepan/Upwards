@@ -5,16 +5,7 @@ import { useAuthStore } from '../store/auth_store'
 import { UserRepository } from '../repository/user_repository'
 import { db } from '../lib/db'
 import { useTheme } from '../composables/useTheme'
-import emailLight from '../assets/icons/clarity--email-light.svg'
-import emailDark from '../assets/icons/clarity--email-dark.svg'
-import lockLight from '../assets/icons/material-symbols-light--lock.svg'
-import lockDark from '../assets/icons/material-symbols-light--lock-outline.svg'
-import eyeOnLight from '../assets/icons/mdi--eye.svg'
-import eyeOnDark from '../assets/icons/mdi--eye-outline.svg'
-import eyeOffLight from '../assets/icons/mdi--eye-off.svg'
-import eyeOffDark from '../assets/icons/mdi--eye-off-outline.svg'
-import userLight from '../assets/icons/mdi--account.svg'
-import userDark from '../assets/icons/mdi--account-outline.svg'
+import { themeIcons, themeColors } from '../config/theme.config'
 
 const emit = defineEmits<{ switchToLogin: [] }>()
 
@@ -22,6 +13,17 @@ const { t } = useLanguage()
 const { isDark } = useTheme()
 const auth = useAuthStore()
 const userRepo = new UserRepository(db.users)
+
+// Colores reactivos desde theme.config.ts
+const currentColors = computed(() =>
+  isDark.value ? themeColors.dark : themeColors.light
+)
+const primaryColor = computed(() => currentColors.value.primary)
+const surfaceColor = computed(() => currentColors.value.surface)
+const textColor = computed(() => currentColors.value.text)
+const textSecondaryColor = computed(() => currentColors.value.textSecondary)
+const borderColor = computed(() => currentColors.value.border)
+const inputBgColor = computed(() => currentColors.value.inputBg)
 
 const username = ref('')
 const email = ref('')
@@ -88,15 +90,22 @@ function onBackToLogin(): void {
 </script>
 
 <template>
-  <div class="register-panel">
-    <h2 class="panel-title">{{ t('auth.register.title') }}</h2>
+  <div class="register-panel" :style="{ backgroundColor: surfaceColor, color: textColor }">
+    <h2 class="panel-title" :style="{ color: textColor }">
+      {{ t('auth.register.title') }}
+    </h2>
 
     <form class="auth-form" @submit.prevent="handleSubmit" novalidate>
       <!-- Nombre de usuario -->
       <div class="field">
-        <label for="reg-username">{{ t('auth.username.label') }}</label>
-        <div class="input-wrapper" :class="{ error: usernameError || auth.error === 'auth.username.taken' }">
-          <img :src="isDark ? userDark : userLight" class="input-svg-icon" alt="" />
+        <label for="reg-username" :style="{ color: textSecondaryColor }">
+          {{ t('auth.username.label') }}
+        </label>
+        <div class="input-wrapper" :class="{ error: usernameError || auth.error === 'auth.username.taken' }" :style="{ borderColor: borderColor, backgroundColor: inputBgColor }">
+          <!-- Icono usuario con círculo amarillo en modo oscuro -->
+          <span class="icon-circle" :style="{ backgroundColor: isDark ? primaryColor : 'transparent' }">
+            <img :src="isDark ? themeIcons.user.dark : themeIcons.user.light" class="input-svg-icon" alt="" />
+          </span>
           <input
             id="reg-username"
             v-model="username"
@@ -104,6 +113,7 @@ function onBackToLogin(): void {
             :placeholder="t('auth.username.placeholder')"
             autocomplete="username"
             @blur="validateUsername()"
+            :style="{ color: textColor }"
           />
           <span v-if="checkingUsername" class="input-spinner" />
         </div>
@@ -117,9 +127,14 @@ function onBackToLogin(): void {
 
       <!-- Email -->
       <div class="field">
-        <label for="reg-email">{{ t('auth.email.label') }}</label>
-        <div class="input-wrapper" :class="{ error: emailError }">
-          <img :src="isDark ? emailDark : emailLight" class="input-svg-icon" alt="" />
+        <label for="reg-email" :style="{ color: textSecondaryColor }">
+          {{ t('auth.email.label') }}
+        </label>
+        <div class="input-wrapper" :class="{ error: emailError }" :style="{ borderColor: borderColor, backgroundColor: inputBgColor }">
+          <!-- Icono email con círculo amarillo en modo oscuro -->
+          <span class="icon-circle" :style="{ backgroundColor: isDark ? primaryColor : 'transparent' }">
+            <img :src="isDark ? themeIcons.email.dark : themeIcons.email.light" class="input-svg-icon" alt="" />
+          </span>
           <input
             id="reg-email"
             v-model="email"
@@ -127,6 +142,7 @@ function onBackToLogin(): void {
             :placeholder="t('auth.email.placeholder')"
             autocomplete="email"
             @blur="touched.email = true"
+            :style="{ color: textColor }"
           />
         </div>
         <span v-if="emailError" class="field-error">{{ emailError }}</span>
@@ -134,9 +150,14 @@ function onBackToLogin(): void {
 
       <!-- Contraseña -->
       <div class="field">
-        <label for="reg-password">{{ t('auth.password.label') }}</label>
-        <div class="input-wrapper" :class="{ error: passwordError }">
-          <img :src="isDark ? lockDark : lockLight" class="input-svg-icon" alt="" />
+        <label for="reg-password" :style="{ color: textSecondaryColor }">
+          {{ t('auth.password.label') }}
+        </label>
+        <div class="input-wrapper" :class="{ error: passwordError }" :style="{ borderColor: borderColor, backgroundColor: inputBgColor }">
+          <!-- Icono candado con círculo amarillo en modo oscuro -->
+          <span class="icon-circle" :style="{ backgroundColor: isDark ? primaryColor : 'transparent' }">
+            <img :src="isDark ? themeIcons.lock.dark : themeIcons.lock.light" class="input-svg-icon" alt="" />
+          </span>
           <input
             id="reg-password"
             v-model="password"
@@ -144,6 +165,7 @@ function onBackToLogin(): void {
             :placeholder="t('auth.password.placeholder')"
             autocomplete="new-password"
             @blur="touched.password = true"
+            :style="{ color: textColor }"
           />
           <button
             type="button"
@@ -152,13 +174,16 @@ function onBackToLogin(): void {
             :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
             tabindex="-1"
           >
-            <img
-              :src="showPassword
-                ? (isDark ? eyeOffDark : eyeOffLight)
-                : (isDark ? eyeOnDark : eyeOnLight)"
-              class="eye-svg-icon"
-              :alt="showPassword ? 'Ocultar' : 'Mostrar'"
-            />
+            <!-- Icono ojo con círculo amarillo en modo oscuro -->
+            <span class="icon-circle" :style="{ backgroundColor: isDark ? primaryColor : 'transparent' }">
+              <img
+                :src="showPassword
+                  ? (isDark ? themeIcons.eyeOff.dark : themeIcons.eyeOff.light)
+                  : (isDark ? themeIcons.eyeOn.dark : themeIcons.eyeOn.light)"
+                class="eye-svg-icon"
+                :alt="showPassword ? 'Ocultar' : 'Mostrar'"
+              />
+            </span>
           </button>
         </div>
         <span v-if="passwordError" class="field-error">{{ passwordError }}</span>
@@ -166,9 +191,14 @@ function onBackToLogin(): void {
 
       <!-- Confirmar contraseña -->
       <div class="field">
-        <label for="reg-confirm-password">{{ t('auth.password.confirmLabel') }}</label>
-        <div class="input-wrapper" :class="{ error: confirmPasswordError }">
-          <img :src="isDark ? lockDark : lockLight" class="input-svg-icon" alt="" />
+        <label for="reg-confirm-password" :style="{ color: textSecondaryColor }">
+          {{ t('auth.password.confirmLabel') }}
+        </label>
+        <div class="input-wrapper" :class="{ error: confirmPasswordError }" :style="{ borderColor: borderColor, backgroundColor: inputBgColor }">
+          <!-- Icono candado con círculo amarillo en modo oscuro -->
+          <span class="icon-circle" :style="{ backgroundColor: isDark ? primaryColor : 'transparent' }">
+            <img :src="isDark ? themeIcons.lock.dark : themeIcons.lock.light" class="input-svg-icon" alt="" />
+          </span>
           <input
             id="reg-confirm-password"
             v-model="confirmPassword"
@@ -176,6 +206,7 @@ function onBackToLogin(): void {
             :placeholder="t('auth.password.confirmPlaceholder')"
             autocomplete="off"
             @blur="touched.confirmPassword = true"
+            :style="{ color: textColor }"
           />
           <button
             type="button"
@@ -184,13 +215,16 @@ function onBackToLogin(): void {
             :aria-label="showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
             tabindex="-1"
           >
-            <img
-              :src="showConfirmPassword
-                ? (isDark ? eyeOffDark : eyeOffLight)
-                : (isDark ? eyeOnDark : eyeOnLight)"
-              class="eye-svg-icon"
-              :alt="showConfirmPassword ? 'Ocultar' : 'Mostrar'"
-            />
+            <!-- Icono ojo con círculo amarillo en modo oscuro -->
+            <span class="icon-circle" :style="{ backgroundColor: isDark ? primaryColor : 'transparent' }">
+              <img
+                :src="showConfirmPassword
+                  ? (isDark ? themeIcons.eyeOff.dark : themeIcons.eyeOff.light)
+                  : (isDark ? themeIcons.eyeOn.dark : themeIcons.eyeOn.light)"
+                class="eye-svg-icon"
+                :alt="showConfirmPassword ? 'Ocultar' : 'Mostrar'"
+              />
+            </span>
           </button>
         </div>
         <span v-if="confirmPasswordError" class="field-error">{{ confirmPasswordError }}</span>
@@ -204,35 +238,40 @@ function onBackToLogin(): void {
       </Transition>
 
       <!-- Botón -->
-      <button type="submit" class="btn-primary" :disabled="auth.isLoading || !isValid || checkingUsername">
+      <button
+        type="submit"
+        class="btn-primary"
+        :disabled="auth.isLoading || !isValid || checkingUsername"
+        :style="{ backgroundColor: primaryColor }"
+      >
         {{ auth.isLoading ? t('auth.loading') : t('auth.register.button') }}
       </button>
     </form>
 
-    <p class="switch-link">
+    <p class="switch-link" :style="{ color: textSecondaryColor }">
       {{ t('auth.register.hasAccount') }}
-      <button class="link" @click="onBackToLogin">{{ t('auth.register.loginLink') }}</button>
+      <button class="link" @click="onBackToLogin" :style="{ color: primaryColor }">
+        {{ t('auth.register.loginLink') }}
+      </button>
     </p>
   </div>
 </template>
 
 <style scoped>
-/* ... exactamente el mismo CSS que en el LoginPanel (bordes ovalados, placeholders, etc.) ... */
 .register-panel {
   width: 100%;
   max-width: 400px;
   padding: 32px;
-  background: var(--color-surface);
   border-radius: 16px;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
   box-sizing: border-box;
+  transition: background 0.3s, color 0.3s;
 }
 
 .panel-title {
   margin: 0 0 24px;
   font-size: 24px;
   font-weight: 600;
-  color: var(--color-text);
   text-align: center;
 }
 
@@ -251,7 +290,6 @@ function onBackToLogin(): void {
 .field label {
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-text-secondary);
 }
 
 .input-wrapper {
@@ -260,8 +298,7 @@ function onBackToLogin(): void {
   gap: 8px;
   padding: 0 12px;
   border-radius: 50px;
-  border: 1px solid var(--color-border);
-  background: var(--color-input-bg);
+  border: 1px solid;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -278,20 +315,24 @@ function onBackToLogin(): void {
   box-shadow: 0 0 0 3px rgba(229, 57, 53, 0.2);
 }
 
-.input-svg-icon {
-  width: 20px;
-  height: 20px;
+/* Círculo de fondo para iconos (amarillo en modo oscuro, transparente en claro) */
+.icon-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  display: block;
-  opacity: 0.5;
-  color: currentColor;
+  transition: background-color 0.3s ease;
 }
 
+.input-svg-icon,
 .eye-svg-icon {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   display: block;
-  color: currentColor;
+  opacity: 0.8;
 }
 
 .input-wrapper input {
@@ -301,7 +342,6 @@ function onBackToLogin(): void {
   background: transparent;
   padding: 12px 0;
   font-size: 15px;
-  color: var(--color-text);
   font-family: inherit;
 }
 
@@ -326,19 +366,17 @@ function onBackToLogin(): void {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.5;
+  opacity: 0.7;
   transition: opacity 0.2s ease;
 }
 
 .toggle-password:hover {
   opacity: 1;
 }
-
-
 
 .field-error {
   font-size: 12px;
@@ -361,17 +399,16 @@ function onBackToLogin(): void {
   height: 48px;
   border: none;
   border-radius: 50px;
-  background: var(--color-primary);
-  color: var(--color-on-primary);
+  color: white;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.3s ease, box-shadow 0.3s ease;
+  transition: opacity 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
   font-family: inherit;
 }
 
 .btn-primary:hover:not(:disabled) {
-  box-shadow: 0 4px 12px var(--color-primary-alpha);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
 }
 
 .btn-primary:disabled {
@@ -383,13 +420,11 @@ function onBackToLogin(): void {
   margin: 20px 0 0;
   text-align: center;
   font-size: 14px;
-  color: var(--color-text-secondary);
 }
 
 .link {
   background: none;
   border: none;
-  color: var(--color-primary);
   font-weight: 600;
   cursor: pointer;
   text-decoration: underline;

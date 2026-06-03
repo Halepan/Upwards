@@ -5,3 +5,4 @@ dist/
 prueba.ts
 *.py
 CHANGELOG_REFACTOR.txt
+src/components/icongallery.vue
