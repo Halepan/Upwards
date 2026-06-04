@@ -22,17 +22,14 @@ const emit = defineEmits<{ close: [] }>()
           @click.stop
         >
           <button
-            v-for="item in items"
-            :key="item.label"
-            class="ctx-item"
-            @click="item.action(); emit('close')"
-          >
-            <span class="ctx-icon">
-              <img v-if="item.icon.endsWith('.svg')" :src="item.icon" class="ctx-icon-img" />
-              <span v-else>{{ item.icon }}</span>
-            </span>
-            <span>{{ item.label }}</span>
-          </button>
+  v-for="item in items"
+  :key="item.label"
+  class="ctx-item"
+  @click="item.action(); $emit('close')"
+>
+  <img :src="item.icon" class="ctx-icon" alt="" />
+  <span>{{ item.label }}</span>
+</button>
         </div>
       </div>
     </Transition>
@@ -79,15 +76,6 @@ const emit = defineEmits<{ close: [] }>()
 }
 
 .ctx-icon {
-  font-size: 16px;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.ctx-icon-img {
   width: 18px;
   height: 18px;
   display: block;

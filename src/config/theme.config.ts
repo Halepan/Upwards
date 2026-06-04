@@ -200,7 +200,7 @@ export const themeColors = {
     text: '#E0E0E0',
     textSecondary: '#999',
     border: '#333',
-    inputBg: '#1212',
+    inputBg: '#1e1e1e',
     hover: 'rgba(255, 255, 255, 0.04)',
   },
 }

@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useLongPress } from '../composables/useLongPress'
+import { useTheme } from '../composables/useTheme'
 import ContextMenu from './ContextMenu.vue'
 import FloatingActionButton from './FloatingActionButton.vue'
 import SlidePanel from './SlidePanel.vue'
 import WeekPlanner from './WeekPlanner.vue'
 import type { FabAction } from './FloatingActionButton.vue'
 import type { PlannerItem } from './WeekPlanner.vue'
-import editIcon from '../assets/icons/mdi--check-outline.svg'
-import deleteIcon from '../assets/icons/weui--delete-outlined.svg'
-import habitIcon from '../assets/icons/si--book-line.svg'
-import calendarIcon from '../assets/icons/icon-park-outline--left-bar.svg'
+import { themeIcons } from '../config/theme.config'
+
+const { isDark } = useTheme()
 
 interface HabitLog {
   date: string
@@ -259,19 +259,19 @@ function deleteHabit(habit: Habit): void {
 
 function onLongPressHabit(habit: Habit, event: MouseEvent | TouchEvent): void {
   startPress(event, [
-    { icon: editIcon, label: 'Editar', action: () => openEdit(habit) },
-    { icon: deleteIcon, label: 'Eliminar', action: () => deleteHabit(habit) },
+    { icon: isDark.value ? themeIcons.check.dark : themeIcons.check.light, label: 'Editar', action: () => openEdit(habit) },
+    { icon: isDark.value ? themeIcons.delete.dark : themeIcons.delete.light, label: 'Eliminar', action: () => deleteHabit(habit) },
   ])
 }
 
 const planningMode = ref(false)
 const planningTitle = ref('')
 
-const fabActions: FabAction[] = [
-  { icon: habitIcon, label: 'Nuevo hábito', action: () => openEdit() },
-  { icon: calendarIcon, label: 'Planificar semana', action: () => { planningTitle.value = 'Planificar semana'; planningMode.value = true } },
-  { icon: editIcon, label: 'Editar semana planificada', action: () => { planningTitle.value = 'Editar semana planificada'; planningMode.value = true } },
-]
+const fabActions = computed<FabAction[]>(() => [
+  { icon: isDark.value ? themeIcons.book.dark : themeIcons.book.light, label: 'Nuevo hábito', action: () => openEdit() },
+  { icon: isDark.value ? themeIcons.leftBar.dark : themeIcons.leftBar.light, label: 'Planificar semana', action: () => { planningTitle.value = 'Planificar semana'; planningMode.value = true } },
+  { icon: isDark.value ? themeIcons.check.dark : themeIcons.check.light, label: 'Editar semana planificada', action: () => { planningTitle.value = 'Editar semana planificada'; planningMode.value = true } },
+])
 
 function onPlanConfirm(assignments: Record<number, number[]>) {
   console.log('Habits planned:', assignments)

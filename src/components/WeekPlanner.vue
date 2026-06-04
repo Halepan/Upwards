@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useTheme } from '../composables/useTheme'
 import ContextMenu from './ContextMenu.vue'
-import editIcon from '../assets/icons/mdi--check-outline.svg'
-import deleteIcon from '../assets/icons/weui--delete-outlined.svg'
+import { themeIcons } from '../config/theme.config'
+
+const { isDark } = useTheme()
 
 export interface PlannerItem {
   id: number
@@ -129,8 +131,8 @@ function showContext(item: PlannerItem, event: MouseEvent | TouchEvent) {
   contextX.value = pos.clientX
   contextY.value = pos.clientY
   contextItems.value = [
-    { icon: editIcon, label: 'Editar', action: () => { closeContext(); emit('edit', item) } },
-    { icon: deleteIcon, label: 'Eliminar', action: () => { closeContext(); showConfirm('delete', item) } },
+    { icon: isDark.value ? themeIcons.check.dark : themeIcons.check.light, label: 'Editar', action: () => { closeContext(); emit('edit', item) } },
+    { icon: isDark.value ? themeIcons.delete.dark : themeIcons.delete.light, label: 'Eliminar', action: () => { closeContext(); showConfirm('delete', item) } },
   ]
   contextVisible.value = true
 }

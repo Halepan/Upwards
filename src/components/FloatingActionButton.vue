@@ -17,11 +17,6 @@ function toggle(): void {
   expanded.value = !expanded.value
 }
 
-function runAction(action: FabAction): void {
-  action.action()
-  expanded.value = false
-}
-
 defineExpose({ expanded })
 </script>
 
@@ -29,16 +24,13 @@ defineExpose({ expanded })
   <div class="fab-wrapper">
     <TransitionGroup name="fab-opt" tag="div" class="fab-options" v-show="expanded">
       <button
-        v-for="act in actions"
-        :key="act.label"
-        class="fab-option"
-        @click="runAction(act)"
-      >
-        <span class="fab-opt-icon">
-          <img v-if="act.icon.endsWith('.svg')" :src="act.icon" class="fab-icon-img" />
-          <span v-else>{{ act.icon }}</span>
-        </span>
-        <span class="fab-opt-label">{{ act.label }}</span>
+  v-for="act in actions"
+  :key="act.label"
+  class="fab-option"
+  @click="act.action"
+        >
+  <img :src="act.icon" class="fab-opt-icon" alt="" />
+  <span class="fab-opt-label">{{ act.label }}</span>
       </button>
     </TransitionGroup>
 
@@ -95,13 +87,6 @@ defineExpose({ expanded })
 }
 
 .fab-opt-icon {
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.fab-icon-img {
   width: 18px;
   height: 18px;
   display: block;

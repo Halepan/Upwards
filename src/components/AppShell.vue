@@ -28,7 +28,6 @@ const surfaceColor = computed(() => currentColors.value.surface)
 const textColor = computed(() => currentColors.value.text)
 const textSecondaryColor = computed(() => currentColors.value.textSecondary)
 const borderColor = computed(() => currentColors.value.border)
-const hoverColor = computed(() => currentColors.value.hover)
 
 const menuOpen = ref(false)
 
@@ -73,11 +72,13 @@ function closeMenu(): void {
         <button
           v-if="section === 'finanzas'"
           class="history-btn"
+          :class="{ 'history-btn-dark': isDark }"
           @click="emit('open-history')"
           :style="{ color: textSecondaryColor }"
         >
+          <!-- Icono de historial (left-bar) -->
           <img
-            :src="isDark ? themeIcons.book.dark : themeIcons.book.light"
+            :src="isDark ? themeIcons.leftBar.dark : themeIcons.leftBar.light"
             class="nav-svg-icon"
             alt="history"
           />
@@ -138,12 +139,12 @@ function closeMenu(): void {
                   class="theme-toggle-inline"
                   @click="toggleTheme"
                   :style="{
-                    backgroundColor: hoverColor,
-                    color: textColor
+                    backgroundColor: primaryColor,
+                    color: 'white'
                   }"
                 >
                   <img
-                    :src="isDark ? themeIcons.sun.light : themeIcons.moon.dark"
+                    :src="isDark ? themeIcons.sun.dark : themeIcons.moon.light"
                     class="theme-svg-icon"
                     alt="theme"
                   />
@@ -173,21 +174,25 @@ function closeMenu(): void {
         class="nav-tab"
         :class="{ active: section === tab.key }"
         @click="emit('update:section', tab.key)"
+        :style="{
+          backgroundColor: section === tab.key ? primaryColor : 'transparent',
+          borderRadius: '8px',
+          margin: '4px',
+          padding: section === tab.key ? '4px 12px' : '4px'
+        }"
       >
         <img
-          :src="section === tab.key
-            ? (isDark ? tab.icon.dark : tab.icon.light)
-            : (isDark ? tab.icon.dark : tab.icon.light)"
+          :src="isDark ? tab.icon.dark : tab.icon.light"
           class="nav-svg-icon"
           :alt="tab.label"
           :style="{
-            color: section === tab.key ? primaryColor : textSecondaryColor
+            color: section === tab.key ? 'white' : textSecondaryColor
           }"
         />
         <span
           class="nav-label"
           :style="{
-            color: section === tab.key ? primaryColor : textSecondaryColor
+            color: section === tab.key ? 'white' : textSecondaryColor
           }"
         >
           {{ tab.label }}
@@ -240,6 +245,17 @@ function closeMenu(): void {
 .history-btn .nav-svg-icon {
   width: 22px;
   height: 22px;
+}
+
+.history-btn-dark {
+  background: #FFD700;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 
 .section-title {
@@ -347,7 +363,7 @@ function closeMenu(): void {
   font-size: 13px;
   cursor: pointer;
   font-family: inherit;
-  transition: background 0.2s;
+  transition: opacity 0.2s;
 }
 
 .theme-toggle-inline:hover {
@@ -384,7 +400,7 @@ function closeMenu(): void {
   background: transparent;
   font-family: inherit;
   cursor: pointer;
-  transition: color 0.2s;
+  transition: background 0.2s, color 0.2s, border-radius 0.2s;
   padding: 4px;
 }
 

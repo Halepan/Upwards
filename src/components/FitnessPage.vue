@@ -12,564 +12,579 @@ import RoutinePlanner from './RoutinePlanner.vue'
 import type { FabAction } from './FloatingActionButton.vue'
 import type { ChartSeries } from './GenericChart.vue'
 import type { PlannerItem } from './WeekPlanner.vue'
-import gymIcon from '../assets/icons/healthicons--gym.svg'
-import clipboardIcon from '../assets/icons/si--book-fill.svg'
-import calendarIcon from '../assets/icons/icon-park-outline--left-bar.svg'
-import editIcon from '../assets/icons/mdi--check-outline.svg'
-import deleteIcon from '../assets/icons/weui--delete-outlined.svg'
-import exDefaultIcon from '../assets/icons/healthicons--gym-outline.svg'
-import legIcon from '../assets/icons/healthicons--leg.svg'
-import armIcon from '../assets/icons/mdi--arm-flex.svg'
-import gymFillIcon from '../assets/icons/healthicons--gym.svg'
+import { themeIcons, themeColors } from '../config/theme.config'
 
-// ---------- interfaz de ejercicios con series ----------
-interface ExerciseSet {
-  plannedReps: number
-  actualReps: number
-  confirmed: boolean
+/* -------------------------------------------------------------------------- */
+/*  Tipos locales                                                             */
+/* -------------------------------------------------------------------------- */
+
+interface SerieEjercicio {
+  repeticionesPrevistas: number
+  repeticionesReales: number
+  confirmada: boolean
 }
 
-interface Exercise {
+interface Ejercicio {
   id: number
-  name: string
-  icon: string
-  muscleGroup: string
-  type: 'fuerza' | 'resistencia'
-  sets: ExerciseSet[]
+  nombre: string
+  icono: string
+  grupoMuscular: string
+  tipo: 'fuerza' | 'resistencia'
+  series: SerieEjercicio[]
 }
 
-const exercises = ref<Exercise[]>([
-  { id: 1, name: 'Press banca', icon: gymFillIcon, muscleGroup: 'Pectoral', type: 'fuerza', sets: [{ plannedReps: 10, actualReps: 10, confirmed: true }, { plannedReps: 8, actualReps: 8, confirmed: true }] },
-  { id: 2, name: 'Remo', icon: gymFillIcon, muscleGroup: 'Dorsal', type: 'fuerza', sets: [{ plannedReps: 12, actualReps: 10, confirmed: false }, { plannedReps: 10, actualReps: 8, confirmed: false }] },
-  { id: 3, name: 'Sentadilla', icon: legIcon, muscleGroup: 'Piernas', type: 'fuerza', sets: [{ plannedReps: 15, actualReps: 15, confirmed: true }, { plannedReps: 12, actualReps: 12, confirmed: true }, { plannedReps: 10, actualReps: 10, confirmed: true }] },
-  { id: 4, name: 'Press militar', icon: gymFillIcon, muscleGroup: 'Hombros', type: 'fuerza', sets: [{ plannedReps: 8, actualReps: 6, confirmed: false }] },
-  { id: 5, name: 'Cardio HIIT', icon: exDefaultIcon, muscleGroup: 'Cardio', type: 'resistencia', sets: [{ plannedReps: 20, actualReps: 20, confirmed: true }, { plannedReps: 15, actualReps: 15, confirmed: true }] },
-  { id: 6, name: 'Plancha', icon: exDefaultIcon, muscleGroup: 'Core', type: 'resistencia', sets: [{ plannedReps: 3, actualReps: 2, confirmed: false }, { plannedReps: 2, actualReps: 1, confirmed: false }] },
-  { id: 7, name: 'Curl bíceps', icon: armIcon, muscleGroup: 'Bíceps', type: 'resistencia', sets: [{ plannedReps: 15, actualReps: 15, confirmed: true }, { plannedReps: 12, actualReps: 12, confirmed: true }] },
-  { id: 8, name: 'Fondos', icon: armIcon, muscleGroup: 'Tríceps', type: 'resistencia', sets: [{ plannedReps: 12, actualReps: 10, confirmed: false }, { plannedReps: 10, actualReps: 8, confirmed: false }] },
+interface Rutina {
+  id: number
+  nombre: string
+  icono: string
+  idsEjercicios: number[]
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Datos de ejercicios y rutinas (todos usan el icono de gym)                */
+/* -------------------------------------------------------------------------- */
+
+const ejercicios = ref<Ejercicio[]>([
+  { id: 1, nombre: 'Press banca', icono: '🏋️', grupoMuscular: 'Pectoral', tipo: 'fuerza', series: [{ repeticionesPrevistas: 10, repeticionesReales: 10, confirmada: true }] },
+  { id: 2, nombre: 'Remo', icono: '🏋️', grupoMuscular: 'Dorsal', tipo: 'fuerza', series: [{ repeticionesPrevistas: 12, repeticionesReales: 10, confirmada: false }] },
+  { id: 3, nombre: 'Sentadilla', icono: '🦵', grupoMuscular: 'Piernas', tipo: 'fuerza', series: [{ repeticionesPrevistas: 15, repeticionesReales: 15, confirmada: true }] },
+  { id: 4, nombre: 'Press militar', icono: '🏋️', grupoMuscular: 'Hombros', tipo: 'fuerza', series: [{ repeticionesPrevistas: 8, repeticionesReales: 6, confirmada: false }] },
+  { id: 5, nombre: 'Cardio HIIT', icono: '🏃', grupoMuscular: 'Cardio', tipo: 'resistencia', series: [{ repeticionesPrevistas: 20, repeticionesReales: 20, confirmada: true }] },
+  { id: 6, nombre: 'Plancha', icono: '🤸', grupoMuscular: 'Core', tipo: 'resistencia', series: [{ repeticionesPrevistas: 3, repeticionesReales: 2, confirmada: false }] },
+  { id: 7, nombre: 'Curl bíceps', icono: '💪', grupoMuscular: 'Bíceps', tipo: 'resistencia', series: [{ repeticionesPrevistas: 15, repeticionesReales: 15, confirmada: true }] },
+  { id: 8, nombre: 'Fondos', icono: '💪', grupoMuscular: 'Tríceps', tipo: 'resistencia', series: [{ repeticionesPrevistas: 12, repeticionesReales: 10, confirmada: false }] },
 ])
 
-interface Routine {
-  id: number
-  name: string
-  icon: string
-  exerciseIds: number[]
-}
-
-const routines = ref<Routine[]>([
-  { id: 101, name: 'Push', icon: armIcon, exerciseIds: [1, 4, 8] },
-  { id: 102, name: 'Pull', icon: gymFillIcon, exerciseIds: [2, 7] },
-  { id: 103, name: 'Piernas', icon: legIcon, exerciseIds: [3, 6] },
+const rutinas = ref<Rutina[]>([
+  { id: 101, nombre: 'Push', icono: '💪', idsEjercicios: [1, 4, 8] },
+  { id: 102, nombre: 'Pull', icono: '💪', idsEjercicios: [2, 7] },
+  { id: 103, nombre: 'Piernas', icono: '🦵', idsEjercicios: [3, 6] },
 ])
+
+/* -------------------------------------------------------------------------- */
+/*  Tema e iconos                                                             */
+/* -------------------------------------------------------------------------- */
 
 const { isDark } = useTheme()
 
-const warmGroups = ['Pectoral', 'Dorsal', 'Piernas', 'Hombros']
-const coolGroups = ['Cardio', 'Core', 'Bíceps', 'Tríceps']
+const coloresActuales = computed(() =>
+  isDark.value ? themeColors.dark : themeColors.light
+)
+const colorPrimario = computed(() => coloresActuales.value.primary)
+const colorSuperficie = computed(() => coloresActuales.value.surface)
+const colorTexto = computed(() => coloresActuales.value.text)
+const colorTextoSecundario = computed(() => coloresActuales.value.textSecondary)
+const colorBorde = computed(() => coloresActuales.value.border)
+const colorFondo = computed(() => coloresActuales.value.background)
+const colorFondoInput = computed(() => coloresActuales.value.inputBg)
 
-const warmPalette = ['#e53935', '#fb8c00', '#ff5252', '#ff6d00']
-const coolPalette = ['#1e88e5', '#43a047', '#00acc1', '#7b1fa2']
+/* -------------------------------------------------------------------------- */
+/*  Datos de gráficos                                                         */
+/* -------------------------------------------------------------------------- */
 
-const warmColors = computed(() => isDark.value ? coolPalette : warmPalette)
-const coolColors = computed(() => isDark.value ? warmPalette : coolPalette)
+const gruposFuerza = ['Pectoral', 'Dorsal', 'Piernas', 'Hombros']
+const gruposResistencia = ['Cardio', 'Core', 'Bíceps', 'Tríceps']
 
-function seededRand(seed: number) {
-  let s = seed
+const paletaCalida = ['#e53935', '#fb8c00', '#ff5252', '#ff6d00']
+const paletaFria = ['#1e88e5', '#43a047', '#00acc1', '#7b1fa2']
+
+const coloresCalidos = computed(() => isDark.value ? paletaFria : paletaCalida)
+const coloresFrios = computed(() => isDark.value ? paletaCalida : paletaFria)
+
+function aleatorioConSemilla(semilla: number) {
+  let s = semilla
   return () => {
     s = (s * 1664525 + 1013904223) & 0x7fffffff
     return s / 0x7fffffff
   }
 }
 
-function generateMuscleData(
-  groups: string[],
-  colors: string[],
-  seedBase: number,
-  baseValues: number[],
-  trend: number,
+function generarDatosMusculares(
+  grupos: string[],
+  colores: string[],
+  semillaBase: number,
+  valoresBase: number[],
+  tendencia: number,
 ): ChartSeries[] {
-  const now = new Date()
-  const start = new Date(now)
-  start.setDate(start.getDate() - 11 * 7)
-  start.setDate(start.getDate() - start.getDay())
+  const ahora = new Date()
+  const inicio = new Date(ahora)
+  inicio.setDate(inicio.getDate() - 11 * 7)
+  inicio.setDate(inicio.getDate() - inicio.getDay())
 
-  return groups.map((group, gi) => {
-    const rand = seededRand(seedBase + gi * 10)
-    const data: { x: Date; y: number }[] = []
-    const cur = new Date(start)
-    let val = baseValues[gi]
-    while (cur <= now) {
-      val += trend + (rand() - 0.5) * 4
-      val = Math.max(30, Math.min(100, val))
-      data.push({ x: new Date(cur), y: Math.round(val * 10) / 10 })
-      cur.setDate(cur.getDate() + 7)
+  return grupos.map((grupo, indice) => {
+    const aleatorio = aleatorioConSemilla(semillaBase + indice * 10)
+    const datos: { x: Date; y: number }[] = []
+    const cursor = new Date(inicio)
+    let valor = valoresBase[indice]
+    while (cursor <= ahora) {
+      valor += tendencia + (aleatorio() - 0.5) * 4
+      valor = Math.max(30, Math.min(100, valor))
+      datos.push({ x: new Date(cursor), y: Math.round(valor * 10) / 10 })
+      cursor.setDate(cursor.getDate() + 7)
     }
-    return { label: group, data, color: colors[gi] }
+    return { label: grupo, data: datos, color: colores[indice] }
   })
 }
 
-const strengthSeries = computed<ChartSeries[]>(() =>
-  generateMuscleData(warmGroups, warmColors.value, 42, [62, 55, 68, 48], 2.2)
+const seriesFuerza = computed<ChartSeries[]>(() =>
+  generarDatosMusculares(gruposFuerza, coloresCalidos.value, 42, [62, 55, 68, 48], 2.2)
 )
 
-const resistanceSeries = computed<ChartSeries[]>(() =>
-  generateMuscleData(coolGroups, coolColors.value, 100, [40, 35, 38, 32], 1.5)
+const seriesResistencia = computed<ChartSeries[]>(() =>
+  generarDatosMusculares(gruposResistencia, coloresFrios.value, 100, [40, 35, 38, 32], 1.5)
 )
 
-// view mode sync between both charts
-const fitViewMode = ref<'diario' | 'semanal' | 'mensual'>('mensual')
+const modoVista = ref<'diario' | 'semanal' | 'mensual'>('mensual')
 
-// ---------- estado del panel de edición y menú contextual ----------
-const editPanel = ref(false)
-const panelTitle = ref('')
-const editingExerciseId = ref<number | null>(null)
+/* -------------------------------------------------------------------------- */
+/*  Estado de edición y menú contextual                                       */
+/* -------------------------------------------------------------------------- */
+
+const panelEditarAbierto = ref(false)
+const tituloPanel = ref('')
+const idEjercicioEditando = ref<number | null>(null)
 
 const {
-  contextVisible, contextItems, contextX, contextY,
-  startPress, cancelPress, closeContext,
+  contextVisible: contextoVisible,
+  contextItems: contextoItems,
+  contextX: contextoX,
+  contextY: contextoY,
+  startPress: iniciarPulsacion,
+  cancelPress: cancelarPulsacion,
+  closeContext: cerrarContexto,
 } = useLongPress()
 
-const planningMode = ref(false)
-const planningTitle = ref('')
-const routinePlannerMode = ref<'new' | 'edit' | null>(null)
-const editingRoutine = ref<Routine | null>(null)
+const modoPlanificacion = ref(false)
+const tituloPlanificacion = ref('')
+const modoRutinaPlanificador = ref<'nueva' | 'editar' | null>(null)
+const rutinaEditando = ref<Rutina | null>(null)
 
-const fabActions: FabAction[] = [
-  { icon: gymIcon, label: 'Nuevo ejercicio', action: () => openAddDialog() },
-  { icon: clipboardIcon, label: 'Nueva rutina', action: () => { routinePlannerMode.value = 'new'; editingRoutine.value = null } },
-  { icon: calendarIcon, label: 'Planificación semanal', action: () => { planningTitle.value = 'Planificación semanal'; planningMode.value = true } },
-  { icon: editIcon, label: 'Editar planificación semanal', action: () => { planningTitle.value = 'Editar planificación semanal'; planningMode.value = true } },
+const accionesFab: FabAction[] = [
+  { icon: themeIcons.gym.light, label: 'Nuevo ejercicio', action: () => abrirDialogoAgregar() },
+  { icon: themeIcons.book.light, label: 'Nueva rutina', action: () => { modoRutinaPlanificador.value = 'nueva'; rutinaEditando.value = null } },
+  { icon: themeIcons.leftBar.light, label: 'Planificación semanal', action: () => { tituloPlanificacion.value = 'Planificación semanal'; modoPlanificacion.value = true } },
+  { icon: themeIcons.check.light, label: 'Editar planificación semanal', action: () => { tituloPlanificacion.value = 'Editar planificación semanal'; modoPlanificacion.value = true } },
 ]
 
-// Items for the week planner: both exercises and routines
-const plannerItems = computed<PlannerItem[]>(() => [
-  ...exercises.value.map(e => ({ id: e.id, name: e.name, icon: e.icon, type: 'exercise' as const })),
-  ...routines.value.map(r => ({ id: r.id, name: r.name, icon: r.icon, type: 'routine' as const, exerciseIds: r.exerciseIds })),
+/* -------------------------------------------------------------------------- */
+/*  Elementos del planificador semanal                                         */
+/* -------------------------------------------------------------------------- */
+
+const elementosPlanificador = computed<PlannerItem[]>(() => [
+  ...ejercicios.value.map(e => ({ id: e.id, name: e.nombre, icon: e.icono, type: 'exercise' as const })),
+  ...rutinas.value.map(r => ({ id: r.id, name: r.nombre, icon: r.icono, type: 'routine' as const, exerciseIds: r.idsEjercicios })),
 ])
 
-function onPlanConfirm(assignments: Record<number, number[]>) {
-  console.log('Exercises planned:', assignments)
-  planningMode.value = false
+function alConfirmarPlan(planificacion: Record<number, number[]>) {
+  console.log('Ejercicios planificados:', planificacion)
+  modoPlanificacion.value = false
 }
 
-function onPlanCancel() {
-  planningMode.value = false
+function alCancelarPlan() {
+  modoPlanificacion.value = false
 }
 
-function onPlanEdit(item: PlannerItem) {
-  if (item.type === 'routine') {
-    const r = routines.value.find(rt => rt.id === item.id)
-    if (r) {
-      editingRoutine.value = r
-      routinePlannerMode.value = 'edit'
+function alEditarPlan(elemento: PlannerItem) {
+  if (elemento.type === 'routine') {
+    const rutina = rutinas.value.find(r => r.id === elemento.id)
+    if (rutina) {
+      rutinaEditando.value = rutina
+      modoRutinaPlanificador.value = 'editar'
     }
   } else {
-    const ex = exercises.value.find(e => e.id === item.id)
-    if (ex) {
-      panelTitle.value = `Editar ${ex.name}`
-      editingExerciseId.value = ex.id
-      editPanel.value = true
+    const ejercicio = ejercicios.value.find(e => e.id === elemento.id)
+    if (ejercicio) {
+      tituloPanel.value = `Editar ${ejercicio.nombre}`
+      idEjercicioEditando.value = ejercicio.id
+      panelEditarAbierto.value = true
     }
   }
 }
 
-function onPlanDelete(item: PlannerItem) {
-  if (item.type === 'routine') {
-    routines.value = routines.value.filter(r => r.id !== item.id)
+function alEliminarPlan(elemento: PlannerItem) {
+  if (elemento.type === 'routine') {
+    rutinas.value = rutinas.value.filter(r => r.id !== elemento.id)
   } else {
-    exercises.value = exercises.value.filter(e => e.id !== item.id)
+    ejercicios.value = ejercicios.value.filter(e => e.id !== elemento.id)
   }
 }
 
-// Routine planner handlers
-function onRoutineSave(routine: { name: string; exerciseIds: number[] }) {
-  if (routinePlannerMode.value === 'edit' && editingRoutine.value) {
-    const r = routines.value.find(rt => rt.id === editingRoutine.value!.id)
+/* -------------------------------------------------------------------------- */
+/*  Planificador de rutinas                                                   */
+/* -------------------------------------------------------------------------- */
+
+function alGuardarRutina(rutina: { name: string; exerciseIds: number[] }) {
+  if (modoRutinaPlanificador.value === 'editar' && rutinaEditando.value) {
+    const r = rutinas.value.find(rt => rt.id === rutinaEditando.value!.id)
     if (r) {
-      r.name = routine.name
-      r.exerciseIds = routine.exerciseIds
+      r.nombre = rutina.name
+      r.idsEjercicios = rutina.exerciseIds
     }
   } else {
-    routines.value.push({
+    rutinas.value.push({
       id: Date.now(),
-      name: routine.name,
-      icon: clipboardIcon,
-      exerciseIds: routine.exerciseIds,
+      nombre: rutina.name,
+      icono: themeIcons.gym.light,
+      idsEjercicios: rutina.exerciseIds,
     })
   }
-  routinePlannerMode.value = null
-  editingRoutine.value = null
+  modoRutinaPlanificador.value = null
+  rutinaEditando.value = null
 }
 
-function onRoutineCancel() {
-  routinePlannerMode.value = null
-  editingRoutine.value = null
+function alCancelarRutina() {
+  modoRutinaPlanificador.value = null
+  rutinaEditando.value = null
 }
 
-// Planned assignments from the week planner (stores day→routines/exercises mapping)
-const plannedWeekAssignments = ref<Record<number, number[]>>({})
+/* -------------------------------------------------------------------------- */
+/*  Ejercicios de hoy (limitados a 4)                                         */
+/* -------------------------------------------------------------------------- */
 
-// Exercises shown today: expand routines from the planner, fall back to all when unplanned
-const todayExercises = computed<Exercise[]>(() => {
-  const now = new Date()
-  const todayIdx = (now.getDay() + 6) % 7 // 0=Mon .. 6=Sun
-  const plannedIds = plannedWeekAssignments.value[todayIdx]
-  if (!plannedIds || plannedIds.length === 0) {
-    // no plan for today → show all exercises (mock data fallback)
-    return exercises.value
+const planificacionSemanal = ref<Record<number, number[]>>({})
+
+const ejerciciosDeHoy = computed<Ejercicio[]>(() => {
+  const ahora = new Date()
+  const indiceHoy = (ahora.getDay() + 6) % 7
+  const idsPlanificados = planificacionSemanal.value[indiceHoy]
+  if (!idsPlanificados || idsPlanificados.length === 0) {
+    return ejercicios.value
   }
-  const result: Exercise[] = []
-  for (const id of plannedIds) {
-    const isRoutine = routines.value.find(r => r.id === id)
-    if (isRoutine) {
-      // expand routine into its exercises
-      for (const exId of isRoutine.exerciseIds) {
-        const ex = exercises.value.find(e => e.id === exId)
-        if (ex) {
-          result.push({ ...ex, id: Date.now() + Math.random() * 10000 + result.length })
+  const resultado: Ejercicio[] = []
+  for (const id of idsPlanificados) {
+    const esRutina = rutinas.value.find(r => r.id === id)
+    if (esRutina) {
+      for (const idEj of esRutina.idsEjercicios) {
+        const ej = ejercicios.value.find(e => e.id === idEj)
+        if (ej) {
+          resultado.push({ ...ej, id: Date.now() + Math.random() * 10000 + resultado.length })
         }
       }
     } else {
-      const ex = exercises.value.find(e => e.id === id)
-      if (ex) {
-        result.push(ex)
+      const ej = ejercicios.value.find(e => e.id === id)
+      if (ej) {
+        resultado.push(ej)
       }
     }
   }
-  return result.length > 0 ? result : exercises.value
+  return resultado
 })
 
-// ---------- AddExerciseDialog state ----------
-const showAddDialog = ref(false)
-const dialogExName = ref('')
-const dialogExMuscle = ref('Pectoral')
-const dialogExType = ref<'fuerza' | 'resistencia'>('fuerza')
-const dialogSetCount = ref(3)
-const dialogSetReps = ref<number[]>([])
+// Solo mostramos los primeros 4 ejercicios de hoy
+const ejerciciosVisibles = computed(() => ejerciciosDeHoy.value.slice(0, 4))
 
-const muscleGroups = ['Pectoral', 'Dorsal', 'Piernas', 'Hombros', 'Cardio', 'Core', 'Bíceps', 'Tríceps', 'Glúteos', 'Abdomen', 'Espalda', 'Gemelo']
+/* -------------------------------------------------------------------------- */
+/*  Diálogo para agregar ejercicio                                            */
+/* -------------------------------------------------------------------------- */
 
-function openAddDialog() {
-  dialogExName.value = ''
-  dialogExMuscle.value = 'Pectoral'
-  dialogExType.value = 'fuerza'
-  dialogSetCount.value = 3
-  dialogSetReps.value = [10, 10, 10]
-  showAddDialog.value = true
+const dialogoAgregarAbierto = ref(false)
+const dialogoNombreEjercicio = ref('')
+const dialogoGrupoMuscular = ref('Pectoral')
+const dialogoTipoEjercicio = ref<'fuerza' | 'resistencia'>('fuerza')
+const dialogoCantidadSeries = ref(3)
+const dialogoRepeticionesSeries = ref<number[]>([])
+
+const gruposMusculares = ['Pectoral', 'Dorsal', 'Piernas', 'Hombros', 'Cardio', 'Core', 'Bíceps', 'Tríceps', 'Glúteos', 'Abdomen', 'Espalda', 'Gemelo']
+
+function abrirDialogoAgregar() {
+  dialogoNombreEjercicio.value = ''
+  dialogoGrupoMuscular.value = 'Pectoral'
+  dialogoTipoEjercicio.value = 'fuerza'
+  dialogoCantidadSeries.value = 3
+  dialogoRepeticionesSeries.value = [10, 10, 10]
+  dialogoAgregarAbierto.value = true
 }
 
-function confirmAddDialog() {
-  if (!dialogExName.value.trim()) return
-  exercises.value.push({
+function confirmarDialogoAgregar() {
+  if (!dialogoNombreEjercicio.value.trim()) return
+  ejercicios.value.push({
     id: Date.now() + Math.floor(Math.random() * 10000),
-    name: dialogExName.value.trim(),
-    icon: gymFillIcon,
-    muscleGroup: dialogExMuscle.value,
-    type: dialogExType.value,
-    sets: dialogSetReps.value.slice(0, dialogSetCount.value).map(v => ({
-      plannedReps: Math.max(1, v || 10),
-      actualReps: 0,
-      confirmed: false,
+    nombre: dialogoNombreEjercicio.value.trim(),
+    icono: themeIcons.gym.light,
+    grupoMuscular: dialogoGrupoMuscular.value,
+    tipo: dialogoTipoEjercicio.value,
+    series: dialogoRepeticionesSeries.value.slice(0, dialogoCantidadSeries.value).map(v => ({
+      repeticionesPrevistas: Math.max(1, v || 10),
+      repeticionesReales: 0,
+      confirmada: false,
     })),
   })
-  showAddDialog.value = false
+  dialogoAgregarAbierto.value = false
 }
 
-function cancelAddDialog() {
-  showAddDialog.value = false
+function cancelarDialogoAgregar() {
+  dialogoAgregarAbierto.value = false
 }
 
-function updateSetCount(delta: number) {
-  const newCount = Math.max(1, Math.min(10, dialogSetCount.value + delta))
-  while (dialogSetReps.value.length < newCount) {
-    dialogSetReps.value.push(10)
+function actualizarCantidadSeries(delta: number) {
+  const nuevaCantidad = Math.max(1, Math.min(10, dialogoCantidadSeries.value + delta))
+  while (dialogoRepeticionesSeries.value.length < nuevaCantidad) {
+    dialogoRepeticionesSeries.value.push(10)
   }
-  if (dialogSetReps.value.length > newCount) {
-    dialogSetReps.value = dialogSetReps.value.slice(0, newCount)
+  if (dialogoRepeticionesSeries.value.length > nuevaCantidad) {
+    dialogoRepeticionesSeries.value = dialogoRepeticionesSeries.value.slice(0, nuevaCantidad)
   }
-  dialogSetCount.value = newCount
+  dialogoCantidadSeries.value = nuevaCantidad
 }
 
-function confirmSet(exerciseId: number, setIndex: number): void {
-  const ex = exercises.value.find(e => e.id === exerciseId)
-  if (!ex || !ex.sets[setIndex]) return
-  ex.sets[setIndex].confirmed = !ex.sets[setIndex].confirmed
+function confirmarSerie(idEjercicio: number, indiceSerie: number): void {
+  const ejercicio = ejercicios.value.find(e => e.id === idEjercicio)
+  if (!ejercicio || !ejercicio.series[indiceSerie]) return
+  ejercicio.series[indiceSerie].confirmada = !ejercicio.series[indiceSerie].confirmada
 }
 
-function openExerciseContext(ex: Exercise, event: MouseEvent | TouchEvent) {
-  const isOriginal = exercises.value.some(e => e.id === ex.id)
-  if (!isOriginal) return // cloned from routine – not in master list
-  startPress(event, [
+function abrirContextoEjercicio(ejercicio: Ejercicio, evento: MouseEvent | TouchEvent) {
+  const esOriginal = ejercicios.value.some(e => e.id === ejercicio.id)
+  if (!esOriginal) return
+  iniciarPulsacion(evento, [
     {
-      icon: editIcon,
+      icon: themeIcons.check.light,
       label: 'Editar',
       action: () => {
-        panelTitle.value = `Editar ${ex.name}`
-        editingExerciseId.value = ex.id
-        editPanel.value = true
+        tituloPanel.value = `Editar ${ejercicio.nombre}`
+        idEjercicioEditando.value = ejercicio.id
+        panelEditarAbierto.value = true
       },
     },
     {
-      icon: deleteIcon,
+      icon: themeIcons.delete.light,
       label: 'Eliminar',
-      action: () => { exercises.value = exercises.value.filter(e => e.id !== ex.id) },
+      action: () => { ejercicios.value = ejercicios.value.filter(e => e.id !== ejercicio.id) },
     },
   ])
 }
 
-// ---------- mediciones corporales (reactivas) ----------
-interface BodyMeasurements {
-  height: number
-  weight: number
-  bodyFat: number
-  neck: number
-  shoulders: number
-  chest: number
-  waist: number
-  hip: number
-  arm: number
-  thigh: number
-  calf: number
-}
+/* -------------------------------------------------------------------------- */
+/*  Mediciones corporales (solo las definidas en BodyMeasurement)             */
+/* -------------------------------------------------------------------------- */
 
-const bodyMeasurements = ref<BodyMeasurements>({
-  height: 175,
-  weight: 74.5,
-  bodyFat: 15.2,
-  neck: 38,
-  shoulders: 112,
-  chest: 98,
-  waist: 80,
-  hip: 94,
-  arm: 35,
-  thigh: 55,
-  calf: 36,
+const medicionesCorporales = ref({
+  altura: 175,
+  peso: 74.5,
+  grasaCorporal: 15.2,
+  pecho: 98,
+  cintura: 80,
+  muslo: 55,
 })
 
-// ---------- inline editing for body measurements ----------
-const editingMeasKey = ref<string | null>(null)
-const editingMeasVal = ref('')
+const claveMedicionEditando = ref<string | null>(null)
+const valorMedicionEditando = ref('')
 
-function startEditMeas(key: keyof BodyMeasurements) {
-  editingMeasKey.value = key
-  editingMeasVal.value = String(bodyMeasurements.value[key])
+function iniciarEdicionMedicion(clave: string) {
+  claveMedicionEditando.value = clave
+  valorMedicionEditando.value = String((medicionesCorporales.value as any)[clave] ?? '')
   nextTick(() => {
-    const el = document.querySelector('.bl-input') as HTMLInputElement
-    if (el) el.focus()
+    const elemento = document.querySelector('.entrada-medicion') as HTMLInputElement
+    if (elemento) elemento.focus()
   })
 }
 
-function saveEditMeas() {
-  if (!editingMeasKey.value) return
-  const val = parseFloat(editingMeasVal.value)
-  if (!isNaN(val) && val > 0) {
-    (bodyMeasurements.value as any)[editingMeasKey.value] = val
+function guardarEdicionMedicion() {
+  if (!claveMedicionEditando.value) return
+  const valor = parseFloat(valorMedicionEditando.value)
+  if (!isNaN(valor) && valor > 0) {
+    (medicionesCorporales.value as any)[claveMedicionEditando.value] = valor
   }
-  editingMeasKey.value = null
+  claveMedicionEditando.value = null
 }
 
-// ---------- etiquetas de mediciones (dinámicas) ----------
-interface BodyLabel {
+interface EtiquetaCorporal {
   id: number
-  key: keyof BodyMeasurements | 'bmi'
-  label: string
-  value: string
-  unit: string
-  side: 'left' | 'right' | 'bottom'
-  offset: number
+  clave: string
+  etiqueta: string
+  valor: string
+  unidad: string
+  lado: 'izquierda' | 'derecha' | 'inferior'
+  desplazamiento: number
 }
 
-const bodyLabels = computed<BodyLabel[]>(() => {
-  const m = bodyMeasurements.value
-  const bmi = m.height ? (m.weight / ((m.height / 100) ** 2)).toFixed(1) : '--'
+const etiquetasCorporales = computed<EtiquetaCorporal[]>(() => {
+  const m = medicionesCorporales.value
+  const imc = m.altura ? (m.peso / ((m.altura / 100) ** 2)).toFixed(1) : '--'
   return [
-    { id: 1, key: 'height', label: 'Altura', value: String(m.height), unit: 'cm', side: 'left', offset: 8 },
-    { id: 2, key: 'weight', label: 'Peso', value: String(m.weight), unit: 'kg', side: 'left', offset: 28 },
-    { id: 3, key: 'bmi', label: 'IMC', value: bmi, unit: '', side: 'left', offset: 48 },
-    { id: 4, key: 'bodyFat', label: 'Grasa', value: String(m.bodyFat), unit: '%', side: 'left', offset: 68 },
-    { id: 5, key: 'neck', label: 'Cuello', value: String(m.neck), unit: 'cm', side: 'right', offset: 5 },
-    { id: 6, key: 'shoulders', label: 'Hombros', value: String(m.shoulders), unit: 'cm', side: 'right', offset: 22 },
-    { id: 7, key: 'chest', label: 'Pecho', value: String(m.chest), unit: 'cm', side: 'right', offset: 40 },
-    { id: 8, key: 'waist', label: 'Cintura', value: String(m.waist), unit: 'cm', side: 'right', offset: 56 },
-    { id: 9, key: 'hip', label: 'Cadera', value: String(m.hip), unit: 'cm', side: 'bottom', offset: 15 },
-    { id: 10, key: 'arm', label: 'Brazo', value: String(m.arm), unit: 'cm', side: 'bottom', offset: 42 },
-    { id: 11, key: 'thigh', label: 'Muslo', value: String(m.thigh), unit: 'cm', side: 'bottom', offset: 65 },
-    { id: 12, key: 'calf', label: 'Pantorrilla', value: String(m.calf), unit: 'cm', side: 'bottom', offset: 88 },
+    { id: 1, clave: 'altura', etiqueta: 'Altura', valor: String(m.altura), unidad: 'cm', lado: 'izquierda', desplazamiento: 10 },
+    { id: 2, clave: 'peso', etiqueta: 'Peso', valor: String(m.peso), unidad: 'kg', lado: 'izquierda', desplazamiento: 30 },
+    { id: 3, clave: 'imc', etiqueta: 'IMC', valor: imc, unidad: '', lado: 'izquierda', desplazamiento: 50 },
+    { id: 4, clave: 'grasaCorporal', etiqueta: 'Grasa', valor: String(m.grasaCorporal), unidad: '%', lado: 'izquierda', desplazamiento: 70 },
+    { id: 5, clave: 'pecho', etiqueta: 'Pecho', valor: String(m.pecho), unidad: 'cm', lado: 'derecha', desplazamiento: 20 },
+    { id: 6, clave: 'cintura', etiqueta: 'Cintura', valor: String(m.cintura), unidad: 'cm', lado: 'derecha', desplazamiento: 50 },
+    { id: 7, clave: 'muslo', etiqueta: 'Muslo', valor: String(m.muslo), unidad: 'cm', lado: 'inferior', desplazamiento: 50 },
   ]
 })
 </script>
 
 <template>
   <RoutinePlanner
-    v-if="routinePlannerMode"
-    :exercises="exercises.map(e => ({ id: e.id, name: e.name, icon: e.icon }))"
-    :existing="routinePlannerMode === 'edit' && editingRoutine ? { id: editingRoutine.id, name: editingRoutine.name, exerciseIds: editingRoutine.exerciseIds } : undefined"
-    @save="onRoutineSave"
-    @cancel="onRoutineCancel"
+    v-if="modoRutinaPlanificador"
+    :exercises="ejercicios.map(e => ({ id: e.id, name: e.nombre, icon: e.icono }))"
+    :existing="modoRutinaPlanificador === 'editar' && rutinaEditando ? { id: rutinaEditando.id, name: rutinaEditando.nombre, exerciseIds: rutinaEditando.idsEjercicios } : undefined"
+    @save="alGuardarRutina"
+    @cancel="alCancelarRutina"
   />
   <WeekPlanner
-    v-else-if="planningMode"
-    :items="plannerItems"
-    :title="planningTitle"
-    @confirm="onPlanConfirm"
-    @cancel="onPlanCancel"
-    @edit="onPlanEdit"
-    @delete="onPlanDelete"
+    v-else-if="modoPlanificacion"
+    :items="elementosPlanificador"
+    :title="tituloPlanificacion"
+    @confirm="alConfirmarPlan"
+    @cancel="alCancelarPlan"
+    @edit="alEditarPlan"
+    @delete="alEliminarPlan"
   />
-  <div v-else class="fitness-page">
-    <!-- ======================== GRÁFICOS (GenericChart) ======================== -->
-    <div class="charts-row">
-      <div class="chart-box">
-        <span class="chart-title">Fuerza</span>
+  <div v-else class="pagina-fitness" :style="{ backgroundColor: colorFondo }">
+    <!-- Gráficos de fuerza y resistencia -->
+    <div class="fila-graficos">
+      <div class="caja-grafico" :style="{ backgroundColor: colorSuperficie }">
+        <span class="titulo-grafico" :style="{ color: colorTexto }">Fuerza</span>
         <GenericChart
-          :series="strengthSeries"
-          :view-mode="fitViewMode"
+          :series="seriesFuerza"
+          :view-mode="modoVista"
           :yFormat="(v: number) => v + '%'"
           :show-legend="true"
           :chart-height="140"
-          :dark-mode="isDark === 'dark'"
-          @update:view-mode="fitViewMode = $event"
+          :dark-mode="isDark"
+          @update:view-mode="modoVista = $event"
         />
       </div>
 
-      <div class="chart-box">
-        <span class="chart-title">Resistencia</span>
+      <div class="caja-grafico" :style="{ backgroundColor: colorSuperficie }">
+        <span class="titulo-grafico" :style="{ color: colorTexto }">Resistencia</span>
         <GenericChart
-          :series="resistanceSeries"
-          :view-mode="fitViewMode"
+          :series="seriesResistencia"
+          :view-mode="modoVista"
           :yFormat="(v: number) => v + '%'"
           :show-legend="true"
           :chart-height="140"
-          :dark-mode="isDark === 'dark'"
-          @update:view-mode="fitViewMode = $event"
+          :dark-mode="isDark"
+          @update:view-mode="modoVista = $event"
         />
       </div>
     </div>
 
-    <!-- ======================== SECCIÓN INFERIOR ======================== -->
-    <div class="bottom-section">
-      <!-- LEFT PANEL: Avatar + etiquetas -->
-      <div class="left-panel">
-        <div class="body-space">
+    <!-- Sección inferior: avatar + ejercicios de hoy -->
+    <div class="seccion-inferior">
+      <div class="panel-izquierdo">
+        <div class="espacio-cuerpo">
           <BodyAvatar
             gender="male"
-            :weight-kg="bodyMeasurements.weight"
-            :height-cm="bodyMeasurements.height"
-            :body-fat-percent="bodyMeasurements.bodyFat"
-            :chest-cm="bodyMeasurements.chest"
-            :waist-cm="bodyMeasurements.waist"
-            :thigh-cm="bodyMeasurements.thigh"
+            :weight-kg="medicionesCorporales.peso"
+            :height-cm="medicionesCorporales.altura"
+            :body-fat-percent="medicionesCorporales.grasaCorporal"
+            :chest-cm="medicionesCorporales.pecho"
+            :waist-cm="medicionesCorporales.cintura"
+            :thigh-cm="medicionesCorporales.muslo"
           />
           <!-- Etiquetas izquierda -->
-          <div class="body-labels-left">
+          <div class="etiquetas-izquierda">
             <div
-              v-for="l in bodyLabels.filter(x => x.side === 'left')"
-              :key="l.id"
-              class="body-label"
-              :style="{ top: l.offset + '%' }"
+              v-for="etq in etiquetasCorporales.filter(x => x.lado === 'izquierda')"
+              :key="etq.id"
+              class="etiqueta-corporal"
+              :style="{ top: etq.desplazamiento + '%', backgroundColor: colorSuperficie }"
             >
-              <span class="bl-name">{{ l.label }}</span>
+              <span class="nombre-etiqueta" :style="{ color: colorTexto }">{{ etq.etiqueta }}</span>
               <input
-                v-if="l.key !== 'bmi' && l.key !== 'bodyFat' && editingMeasKey === l.key"
-                v-model="editingMeasVal"
+                v-if="claveMedicionEditando === etq.clave"
+                v-model="valorMedicionEditando"
                 type="number"
-                class="bl-input"
+                class="entrada-medicion"
+                :style="{ backgroundColor: colorFondoInput, color: colorTexto, borderColor: colorPrimario }"
                 step="any"
-                @blur="saveEditMeas"
-                @keydown.enter="saveEditMeas"
-                @keydown.escape="editingMeasKey = null"
+                @blur="guardarEdicionMedicion"
+                @keydown.enter="guardarEdicionMedicion"
+                @keydown.escape="claveMedicionEditando = null"
               />
-              <span v-else class="bl-value" @click="l.key !== 'bmi' && l.key !== 'bodyFat' && startEditMeas(l.key as any)">{{ l.value }}{{ l.unit }}</span>
+              <span v-else class="valor-etiqueta" :style="{ color: colorTextoSecundario }" @click="iniciarEdicionMedicion(etq.clave)">{{ etq.valor }}{{ etq.unidad }}</span>
             </div>
           </div>
           <!-- Etiquetas derecha -->
-          <div class="body-labels-right">
+          <div class="etiquetas-derecha">
             <div
-              v-for="l in bodyLabels.filter(x => x.side === 'right')"
-              :key="l.id"
-              class="body-label"
-              :style="{ top: l.offset + '%' }"
+              v-for="etq in etiquetasCorporales.filter(x => x.lado === 'derecha')"
+              :key="etq.id"
+              class="etiqueta-corporal"
+              :style="{ top: etq.desplazamiento + '%', backgroundColor: colorSuperficie }"
             >
-              <span class="bl-name">{{ l.label }}</span>
+              <span class="nombre-etiqueta" :style="{ color: colorTexto }">{{ etq.etiqueta }}</span>
               <input
-                v-if="l.key !== 'bmi' && l.key !== 'bodyFat' && editingMeasKey === l.key"
-                v-model="editingMeasVal"
+                v-if="claveMedicionEditando === etq.clave"
+                v-model="valorMedicionEditando"
                 type="number"
-                class="bl-input"
+                class="entrada-medicion"
+                :style="{ backgroundColor: colorFondoInput, color: colorTexto, borderColor: colorPrimario }"
                 step="any"
-                @blur="saveEditMeas"
-                @keydown.enter="saveEditMeas"
-                @keydown.escape="editingMeasKey = null"
+                @blur="guardarEdicionMedicion"
+                @keydown.enter="guardarEdicionMedicion"
+                @keydown.escape="claveMedicionEditando = null"
               />
-              <span v-else class="bl-value" @click="l.key !== 'bmi' && l.key !== 'bodyFat' && startEditMeas(l.key as any)">{{ l.value }}{{ l.unit }}</span>
+              <span v-else class="valor-etiqueta" :style="{ color: colorTextoSecundario }" @click="iniciarEdicionMedicion(etq.clave)">{{ etq.valor }}{{ etq.unidad }}</span>
             </div>
           </div>
           <!-- Etiquetas inferiores -->
-          <div class="body-labels-bottom">
+          <div class="etiquetas-inferiores">
             <div
-              v-for="l in bodyLabels.filter(x => x.side === 'bottom')"
-              :key="l.id"
-              class="body-label bl-bottom"
-              :style="{ left: l.offset + '%' }"
+              v-for="etq in etiquetasCorporales.filter(x => x.lado === 'inferior')"
+              :key="etq.id"
+              class="etiqueta-corporal etq-inferior"
+              :style="{ left: etq.desplazamiento + '%', backgroundColor: colorSuperficie }"
             >
-              <span class="bl-name">{{ l.label }}</span>
+              <span class="nombre-etiqueta" :style="{ color: colorTexto }">{{ etq.etiqueta }}</span>
               <input
-                v-if="l.key !== 'bmi' && l.key !== 'bodyFat' && editingMeasKey === l.key"
-                v-model="editingMeasVal"
+                v-if="claveMedicionEditando === etq.clave"
+                v-model="valorMedicionEditando"
                 type="number"
-                class="bl-input"
+                class="entrada-medicion"
+                :style="{ backgroundColor: colorFondoInput, color: colorTexto, borderColor: colorPrimario }"
                 step="any"
-                @blur="saveEditMeas"
-                @keydown.enter="saveEditMeas"
-                @keydown.escape="editingMeasKey = null"
+                @blur="guardarEdicionMedicion"
+                @keydown.enter="guardarEdicionMedicion"
+                @keydown.escape="claveMedicionEditando = null"
               />
-              <span v-else class="bl-value" @click="l.key !== 'bmi' && l.key !== 'bodyFat' && startEditMeas(l.key as any)">{{ l.value }}{{ l.unit }}</span>
+              <span v-else class="valor-etiqueta" :style="{ color: colorTextoSecundario }" @click="iniciarEdicionMedicion(etq.clave)">{{ etq.valor }}{{ etq.unidad }}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- RIGHT PANEL: Ejercicios de hoy + rutinas -->
-      <div class="right-panel">
-        <h3 class="today-title">Hoy - Ejercicios</h3>
-        <div class="today-list">
+      <!-- Panel derecho: ejercicios de hoy -->
+      <div class="panel-derecho" :style="{ backgroundColor: colorSuperficie }">
+        <h3 class="titulo-hoy" :style="{ color: colorTexto }">Hoy - Ejercicios</h3>
+        <div class="lista-hoy">
           <div
-            v-for="ex in todayExercises"
-            :key="ex.id"
-            class="today-item"
-            @pointerdown="openExerciseContext(ex, $event)"
-            @pointerup="cancelPress"
-            @pointerleave="cancelPress"
+            v-for="ej in ejerciciosVisibles"
+            :key="ej.id"
+            class="item-hoy"
+            :style="{ backgroundColor: colorSuperficie }"
+            @pointerdown="abrirContextoEjercicio(ej, $event)"
+            @pointerup="cancelarPulsacion"
+            @pointerleave="cancelarPulsacion"
           >
-            <span class="ex-icon">
-              <img v-if="ex.icon.endsWith('.svg')" :src="ex.icon" class="ex-svg-icon" :alt="ex.name" />
-              <span v-else>{{ ex.icon }}</span>
-            </span>
-            <div class="ex-info">
-              <span class="ex-name">{{ ex.name }}</span>
-              <span class="ex-muscle">{{ ex.muscleGroup }}</span>
+            <span class="icono-ejercicio">{{ ej.icono }}</span>
+            <div class="info-ejercicio">
+              <span class="nombre-ejercicio" :style="{ color: colorTexto }">{{ ej.nombre }}</span>
+              <span class="grupo-ejercicio" :style="{ color: colorTextoSecundario }">{{ ej.grupoMuscular }}</span>
             </div>
-            <div class="ex-sets">
-              <div v-for="(set, si) in ex.sets" :key="si" class="ex-set-row">
-                <span class="set-label">{{ si + 1 }}ª</span>
-                <div class="ex-value-wrap">
+            <div class="series-ejercicio">
+              <div v-for="(serie, indice) in ej.series" :key="indice" class="fila-serie">
+                <span class="etiqueta-serie" :style="{ color: colorTexto }">{{ indice + 1 }}ª</span>
+                <div class="contenedor-valor">
                   <input
                     type="number"
-                    class="ex-value-input"
-                    :placeholder="String(set.plannedReps)"
-                    v-model="set.actualReps"
+                    class="entrada-valor"
+                    :style="{ backgroundColor: colorFondoInput, color: colorTexto, borderColor: colorBorde }"
+                    :placeholder="String(serie.repeticionesPrevistas)"
+                    v-model="serie.repeticionesReales"
                     min="0"
                   />
                 </div>
-                <label class="check-wrap">
+                <label class="envoltura-check">
                   <input
                     type="checkbox"
-                    :checked="set.confirmed"
-                    @change="confirmSet(ex.id, si)"
-                    class="check-input"
+                    :checked="serie.confirmada"
+                    @change="confirmarSerie(ej.id, indice)"
+                    class="entrada-check"
                   />
-                  <span class="check-circle" :class="{ checked: set.confirmed }">
-                    <svg v-if="set.confirmed" viewBox="0 0 24 24" class="check-svg">
+                  <span class="circulo-check" :class="{ confirmado: serie.confirmada }" :style="serie.confirmada ? { backgroundColor: colorPrimario, borderColor: colorPrimario } : { borderColor: colorBorde }">
+                    <svg v-if="serie.confirmada" viewBox="0 0 24 24" class="svg-check">
                       <path d="M6 14l3 3 9-9" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
                   </span>
@@ -577,201 +592,189 @@ const bodyLabels = computed<BodyLabel[]>(() => {
               </div>
             </div>
           </div>
-          <button class="add-exercise-btn" @click="openAddDialog">
-            + Agregar ejercicio
+          <button class="boton-agregar-ejercicio" @click="abrirDialogoAgregar">
+            <svg class="icono-agregar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="16" />
+              <line x1="8" y1="12" x2="16" y2="12" />
+            </svg>
+            <span>Agregar ejercicio</span>
           </button>
-          <div v-if="exercises.length === 0" class="today-empty">Sin ejercicios</div>
+          <div v-if="ejerciciosVisibles.length === 0" class="hoy-vacio" :style="{ color: colorTextoSecundario }">Sin ejercicios</div>
         </div>
       </div>
     </div>
 
-    <!-- ======================== ADD EXERCISE DIALOG ======================== -->
+    <!-- Diálogo para agregar ejercicio -->
     <Teleport to="body">
-      <div v-if="showAddDialog" class="dialog-overlay" @click.self="cancelAddDialog">
-        <div class="add-dialog">
-          <h3 class="dialog-title">Nuevo ejercicio</h3>
+      <div v-if="dialogoAgregarAbierto" class="fondo-dialogo" @click.self="cancelarDialogoAgregar">
+        <div class="dialogo-agregar" :style="{ backgroundColor: colorSuperficie }">
+          <h3 class="titulo-dialogo" :style="{ color: colorTexto }">Nuevo ejercicio</h3>
 
-          <label class="dialog-field">
-            <span class="dialog-label">Nombre</span>
-            <input v-model="dialogExName" type="text" class="dialog-input" placeholder="Ej: Press banca" />
+          <label class="campo-dialogo">
+            <span class="etiqueta-campo" :style="{ color: colorTextoSecundario }">Nombre</span>
+            <input v-model="dialogoNombreEjercicio" type="text" class="entrada-dialogo" placeholder="Ej: Press banca" :style="{ backgroundColor: colorFondoInput, color: colorTexto, borderColor: colorBorde }" />
           </label>
 
-          <label class="dialog-field">
-            <span class="dialog-label">Grupo muscular</span>
-            <select v-model="dialogExMuscle" class="dialog-select">
-              <option v-for="g in muscleGroups" :key="g" :value="g">{{ g }}</option>
+          <label class="campo-dialogo">
+            <span class="etiqueta-campo" :style="{ color: colorTextoSecundario }">Grupo muscular</span>
+            <select v-model="dialogoGrupoMuscular" class="select-dialogo" :style="{ backgroundColor: colorFondoInput, color: colorTexto, borderColor: colorBorde }">
+              <option v-for="g in gruposMusculares" :key="g" :value="g">{{ g }}</option>
             </select>
           </label>
 
-          <label class="dialog-field">
-            <span class="dialog-label">Tipo</span>
-            <div class="dialog-toggle">
+          <label class="campo-dialogo">
+            <span class="etiqueta-campo" :style="{ color: colorTextoSecundario }">Tipo</span>
+            <div class="botones-tipo">
               <button
-                :class="{ active: dialogExType === 'fuerza' }"
-                @click="dialogExType = 'fuerza'"
+                :class="{ activo: dialogoTipoEjercicio === 'fuerza' }"
+                :style="dialogoTipoEjercicio === 'fuerza' ? { backgroundColor: colorPrimario, color: 'white', borderColor: colorPrimario } : { backgroundColor: colorFondoInput, color: colorTextoSecundario, borderColor: colorBorde }"
+                @click="dialogoTipoEjercicio = 'fuerza'"
               >Fuerza</button>
               <button
-                :class="{ active: dialogExType === 'resistencia' }"
-                @click="dialogExType = 'resistencia'"
+                :class="{ activo: dialogoTipoEjercicio === 'resistencia' }"
+                :style="dialogoTipoEjercicio === 'resistencia' ? { backgroundColor: colorPrimario, color: 'white', borderColor: colorPrimario } : { backgroundColor: colorFondoInput, color: colorTextoSecundario, borderColor: colorBorde }"
+                @click="dialogoTipoEjercicio = 'resistencia'"
               >Resistencia</button>
             </div>
           </label>
 
-          <label class="dialog-field">
-            <span class="dialog-label">Número de series</span>
-            <div class="stepper">
-              <button class="step-btn" @click="updateSetCount(-1)" :disabled="dialogSetCount <= 1">−</button>
-              <span class="step-value">{{ dialogSetCount }}</span>
-              <button class="step-btn" @click="updateSetCount(1)" :disabled="dialogSetCount >= 10">+</button>
+          <label class="campo-dialogo">
+            <span class="etiqueta-campo" :style="{ color: colorTextoSecundario }">Número de series</span>
+            <div class="incrementador">
+              <button class="boton-paso" :style="{ borderColor: colorBorde, color: colorTexto }" @click="actualizarCantidadSeries(-1)" :disabled="dialogoCantidadSeries <= 1">−</button>
+              <span class="valor-paso" :style="{ color: colorTexto }">{{ dialogoCantidadSeries }}</span>
+              <button class="boton-paso" :style="{ borderColor: colorBorde, color: colorTexto }" @click="actualizarCantidadSeries(1)" :disabled="dialogoCantidadSeries >= 10">+</button>
             </div>
           </label>
 
-          <div class="dialog-field">
-            <span class="dialog-label">Repeticiones por serie</span>
-            <div class="dialog-sets-reps">
-              <div v-for="i in dialogSetCount" :key="i" class="set-rep-row">
-                <span class="set-rep-label">{{ i }}ª serie</span>
+          <div class="campo-dialogo">
+            <span class="etiqueta-campo" :style="{ color: colorTextoSecundario }">Repeticiones por serie</span>
+            <div class="lista-repeticiones">
+              <div v-for="i in dialogoCantidadSeries" :key="i" class="fila-repeticion">
+                <span class="etiqueta-repeticion" :style="{ color: colorTexto }">{{ i }}ª serie</span>
                 <input
-                  v-model.number="dialogSetReps[i - 1]"
+                  v-model.number="dialogoRepeticionesSeries[i - 1]"
                   type="number"
-                  class="dialog-input rep-input"
+                  class="entrada-dialogo entrada-repeticion"
                   min="1"
                   placeholder="10"
+                  :style="{ backgroundColor: colorFondoInput, color: colorTexto, borderColor: colorBorde }"
                 />
-                <span class="set-rep-unit">rep</span>
+                <span class="unidad-repeticion" :style="{ color: colorTextoSecundario }">rep</span>
               </div>
             </div>
           </div>
 
-          <div class="dialog-actions">
-            <button class="dialog-btn cancel" @click="cancelAddDialog">Cancelar</button>
-            <button class="dialog-btn confirm" @click="confirmAddDialog" :disabled="!dialogExName.trim()">Añadir</button>
+          <div class="acciones-dialogo">
+            <button class="boton-dialogo cancelar" :style="{ backgroundColor: colorBorde, color: colorTexto }" @click="cancelarDialogoAgregar">Cancelar</button>
+            <button class="boton-dialogo confirmar" :style="{ backgroundColor: colorPrimario, color: 'white' }" @click="confirmarDialogoAgregar" :disabled="!dialogoNombreEjercicio.trim()">Añadir</button>
           </div>
         </div>
       </div>
     </Teleport>
 
-    <!-- ======================== MENÚ CONTEXTUAL, FAB, PANEL DESLIZANTE ======================== -->
+    <!-- Menú contextual, FAB y panel deslizante -->
     <ContextMenu
-      :visible="contextVisible ?? false"
-      :items="contextItems ?? []"
-      :x="contextX ?? 0"
-      :y="contextY ?? 0"
-      @close="closeContext"
+      :visible="contextoVisible ?? false"
+      :items="contextoItems ?? []"
+      :x="contextoX ?? 0"
+      :y="contextoY ?? 0"
+      @close="cerrarContexto"
     />
 
-    <FloatingActionButton :actions="fabActions" />
+    <FloatingActionButton :actions="accionesFab" />
 
-    <SlidePanel :open="editPanel" :title="panelTitle" side="right" @close="editPanel = false; editingExerciseId = null">
-      <template v-if="editingExerciseId !== null">
-        <div class="edit-form">
-          <div v-for="ex in exercises.filter(e => e.id === editingExerciseId)" :key="ex.id" class="edit-fields">
-            <label class="dialog-field">
-              <span class="dialog-label">Nombre</span>
-              <input v-model="ex.name" type="text" class="dialog-input" />
+    <SlidePanel :open="panelEditarAbierto" :title="tituloPanel" side="right" @close="panelEditarAbierto = false; idEjercicioEditando = null">
+      <template v-if="idEjercicioEditando !== null">
+        <div class="formulario-editar">
+          <div v-for="ej in ejercicios.filter(e => e.id === idEjercicioEditando)" :key="ej.id" class="campos-editar">
+            <label class="campo-dialogo">
+              <span class="etiqueta-campo" :style="{ color: colorTextoSecundario }">Nombre</span>
+              <input v-model="ej.nombre" type="text" class="entrada-dialogo" :style="{ backgroundColor: colorFondoInput, color: colorTexto, borderColor: colorBorde }" />
             </label>
-            <label class="dialog-field">
-              <span class="dialog-label">Grupo muscular</span>
-              <select v-model="ex.muscleGroup" class="dialog-select">
-                <option v-for="g in muscleGroups" :key="g" :value="g">{{ g }}</option>
+            <label class="campo-dialogo">
+              <span class="etiqueta-campo" :style="{ color: colorTextoSecundario }">Grupo muscular</span>
+              <select v-model="ej.grupoMuscular" class="select-dialogo" :style="{ backgroundColor: colorFondoInput, color: colorTexto, borderColor: colorBorde }">
+                <option v-for="g in gruposMusculares" :key="g" :value="g">{{ g }}</option>
               </select>
             </label>
-            <label class="dialog-field">
-              <span class="dialog-label">Tipo</span>
-              <div class="dialog-toggle">
-                <button :class="{ active: ex.type === 'fuerza' }" @click="ex.type = 'fuerza'">Fuerza</button>
-                <button :class="{ active: ex.type === 'resistencia' }" @click="ex.type = 'resistencia'">Resistencia</button>
+            <label class="campo-dialogo">
+              <span class="etiqueta-campo" :style="{ color: colorTextoSecundario }">Tipo</span>
+              <div class="botones-tipo">
+                <button :class="{ activo: ej.tipo === 'fuerza' }" :style="ej.tipo === 'fuerza' ? { backgroundColor: colorPrimario, color: 'white', borderColor: colorPrimario } : { backgroundColor: colorFondoInput, color: colorTextoSecundario, borderColor: colorBorde }" @click="ej.tipo = 'fuerza'">Fuerza</button>
+                <button :class="{ activo: ej.tipo === 'resistencia' }" :style="ej.tipo === 'resistencia' ? { backgroundColor: colorPrimario, color: 'white', borderColor: colorPrimario } : { backgroundColor: colorFondoInput, color: colorTextoSecundario, borderColor: colorBorde }" @click="ej.tipo = 'resistencia'">Resistencia</button>
               </div>
             </label>
-            <div class="dialog-field">
-              <span class="dialog-label">Series</span>
-              <div class="edit-sets">
-                <div v-for="(set, si) in ex.sets" :key="si" class="edit-set-row">
-                  <span class="set-rep-label">{{ si + 1 }}ª</span>
-                  <label class="edit-set-field">
-                    <span>Prev.</span>
-                    <input v-model.number="set.plannedReps" type="number" class="dialog-input rep-input" min="1" />
+            <div class="campo-dialogo">
+              <span class="etiqueta-campo" :style="{ color: colorTextoSecundario }">Series</span>
+              <div class="series-editar">
+                <div v-for="(serie, indice) in ej.series" :key="indice" class="fila-editar-serie">
+                  <span class="etiqueta-repeticion" :style="{ color: colorTexto }">{{ indice + 1 }}ª</span>
+                  <label class="campo-editar-serie">
+                    <span :style="{ color: colorTextoSecundario }">Prev.</span>
+                    <input v-model.number="serie.repeticionesPrevistas" type="number" class="entrada-dialogo entrada-repeticion" min="1" :style="{ backgroundColor: colorFondoInput, color: colorTexto, borderColor: colorBorde }" />
                   </label>
-                  <label class="edit-set-field">
-                    <span>Real</span>
-                    <input v-model.number="set.actualReps" type="number" class="dialog-input rep-input" min="0" />
+                  <label class="campo-editar-serie">
+                    <span :style="{ color: colorTextoSecundario }">Real</span>
+                    <input v-model.number="serie.repeticionesReales" type="number" class="entrada-dialogo entrada-repeticion" min="0" :style="{ backgroundColor: colorFondoInput, color: colorTexto, borderColor: colorBorde }" />
                   </label>
-                  <button class="edit-set-del" @click="ex.sets.splice(si, 1)" title="Eliminar serie">&times;</button>
+                  <button class="boton-eliminar-serie" :style="{ color: colorTextoSecundario }" @click="ej.series.splice(indice, 1)" title="Eliminar serie">&times;</button>
                 </div>
               </div>
-              <button class="edit-add-set" @click="ex.sets.push({ plannedReps: 10, actualReps: 0, confirmed: false })">+ Añadir serie</button>
+              <button class="boton-agregar-serie" :style="{ color: colorTextoSecundario, borderColor: colorBorde }" @click="ej.series.push({ repeticionesPrevistas: 10, repeticionesReales: 0, confirmada: false })">+ Añadir serie</button>
             </div>
           </div>
         </div>
       </template>
-      <p v-else class="panel-placeholder">Selecciona un ejercicio para editar</p>
+      <p v-else class="texto-placeholder" :style="{ color: colorTextoSecundario }">Selecciona un ejercicio para editar</p>
     </SlidePanel>
   </div>
 </template>
 
 <style scoped>
-.fitness-page {
-  --fi-accent: #e53935;
-  --fi-bg: #f5f5f5;
-  --fi-bg-card: #FFFFFF;
-  --fi-bg-side: #FAFAFA;
-  --fi-text: #1a1a1a;
-  --fi-text-sec: #888;
-  --fi-border: #e8e8e8;
-  --fi-border-light: #f0f0f0;
-  --fi-shadow: 0px 2px 4px rgba(0,0,0,0.05), 0px 6px 12px rgba(0,0,0,0.1);
-  --fi-shadow-item: 0px 1px 3px rgba(0,0,0,0.04);
-  --fi-label-bg: #FFFFFF;
+.pagina-fitness {
+  --borde: #e8e8e8;
+  --sombra: 0px 2px 4px rgba(0,0,0,0.05), 0px 6px 12px rgba(0,0,0,0.1);
+  --sombra-item: 0px 1px 3px rgba(0,0,0,0.04);
 
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--fi-bg);
   font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   overflow: hidden;
 }
 
-:root.dark .fitness-page {
-  --fi-bg: #121212;
-  --fi-bg-card: #1E1E1E;
-  --fi-bg-side: #1A1A1A;
-  --fi-text: #E0E0E0;
-  --fi-text-sec: #999;
-  --fi-border: #333;
-  --fi-border-light: #2a2a2a;
-  --fi-shadow: 0px 2px 4px rgba(0,0,0,0.2), 0px 6px 12px rgba(0,0,0,0.3);
-  --fi-shadow-item: 0px 1px 3px rgba(0,0,0,0.2);
-  --fi-label-bg: #2A2A2A;
+:root.dark .pagina-fitness {
+  --borde: #333;
+  --sombra: 0px 2px 4px rgba(0,0,0,0.2), 0px 6px 12px rgba(0,0,0,0.3);
+  --sombra-item: 0px 1px 3px rgba(0,0,0,0.2);
 }
 
-.charts-row {
+.fila-graficos {
   display: flex;
   gap: 12px;
   padding: 16px 16px 10px;
   flex-shrink: 0;
 }
 
-.chart-box {
+.caja-grafico {
   flex: 1;
-  background: var(--fi-bg-card);
   border-radius: 12px;
   padding: 10px;
-  box-shadow: var(--fi-shadow);
+  box-shadow: var(--sombra);
   display: flex;
   flex-direction: column;
   gap: 6px;
   min-width: 0;
 }
 
-.chart-title {
+.titulo-grafico {
   font-size: 13px;
   font-weight: 700;
-  color: var(--fi-text);
 }
 
-/* ======================== BOTTOM SECTION ======================== */
-
-.bottom-section {
+.seccion-inferior {
   flex: 1;
   display: flex;
   overflow: hidden;
@@ -780,9 +783,7 @@ const bodyLabels = computed<BodyLabel[]>(() => {
   gap: 12px;
 }
 
-/* ======================== LEFT PANEL ======================== */
-
-.left-panel {
+.panel-izquierdo {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -790,18 +791,17 @@ const bodyLabels = computed<BodyLabel[]>(() => {
   min-width: 0;
 }
 
-.body-space {
+.espacio-cuerpo {
   flex: 1;
   position: relative;
-  margin-right: 200px;
-  /*background: var(--fi-bg-card);
-  border-radius: 12px;
-  box-shadow: var(--fi-shadow);*/
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
   min-height: 280px;
 }
 
-.body-labels-left {
+.etiquetas-izquierda {
   position: absolute;
   left: 0;
   top: 0;
@@ -811,7 +811,7 @@ const bodyLabels = computed<BodyLabel[]>(() => {
   padding: 6px 0;
 }
 
-.body-labels-right {
+.etiquetas-derecha {
   position: absolute;
   right: 0;
   top: 0;
@@ -821,7 +821,7 @@ const bodyLabels = computed<BodyLabel[]>(() => {
   padding: 6px 0;
 }
 
-.body-labels-bottom {
+.etiquetas-inferiores {
   position: absolute;
   left: 0;
   right: 0;
@@ -830,12 +830,11 @@ const bodyLabels = computed<BodyLabel[]>(() => {
   padding: 0 6px;
 }
 
-.body-label {
+.etiqueta-corporal {
   position: absolute;
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: var(--fi-label-bg);
   padding: 2px 6px;
   border-radius: 4px;
   box-shadow: 0 1px 2px rgba(0,0,0,0.08);
@@ -844,31 +843,33 @@ const bodyLabels = computed<BodyLabel[]>(() => {
   transform: translateY(-50%);
 }
 
-.bl-bottom {
+.etq-inferior {
   transform: none;
 }
 
-.bl-value {
+.valor-etiqueta {
   font-size: 9px;
   font-weight: 500;
-  color: var(--fi-text-sec);
   line-height: 1.2;
+  cursor: pointer;
+  transition: opacity 0.15s;
 }
 
-.bl-name {
+.valor-etiqueta:hover {
+  opacity: 0.7;
+}
+
+.nombre-etiqueta {
   font-size: 9px;
   font-weight: 700;
-  color: var(--fi-text);
   line-height: 1.2;
 }
 
-.bl-input {
+.entrada-medicion {
   width: 48px;
   padding: 1px 4px;
-  border: 1px solid var(--fi-accent);
+  border: 1px solid;
   border-radius: 4px;
-  background: var(--fi-bg);
-  color: var(--fi-text);
   font-size: 10px;
   font-weight: 700;
   text-align: center;
@@ -876,38 +877,23 @@ const bodyLabels = computed<BodyLabel[]>(() => {
   outline: none;
 }
 
-.bl-value {
-  cursor: pointer;
-  transition: opacity 0.15s;
-}
-
-.bl-value:hover {
-  opacity: 0.7;
-}
-
-/* Labels on left edge */
-.body-labels-left .body-label {
+.etiquetas-izquierda .etiqueta-corporal {
   left: 4px;
   align-items: flex-start;
 }
 
-/* Labels on right edge */
-.body-labels-right .body-label {
+.etiquetas-derecha .etiqueta-corporal {
   right: 4px;
   align-items: flex-end;
 }
 
-/* Labels on bottom edge */
-.body-labels-bottom .body-label {
+.etiquetas-inferiores .etiqueta-corporal {
   bottom: 4px;
   align-items: center;
 }
 
-/* ======================== RIGHT PANEL ======================== */
-
-.right-panel {
+.panel-derecho {
   flex: 1;
-  background: var(--fi-bg-side);
   border-radius: 12px;
   display: flex;
   flex-direction: column;
@@ -916,16 +902,15 @@ const bodyLabels = computed<BodyLabel[]>(() => {
   max-width: 27.5%;
 }
 
-.today-title {
+.titulo-hoy {
   margin: 0;
   padding: 12px 12px 8px;
   font-size: 20px;
   font-weight: 700;
-  color: var(--fi-text);
   flex-shrink: 0;
 }
 
-.today-list {
+.lista-hoy {
   flex: 1;
   overflow-y: auto;
   padding: 0 12px 12px;
@@ -934,83 +919,97 @@ const bodyLabels = computed<BodyLabel[]>(() => {
   gap: 6px;
 }
 
-.today-list::-webkit-scrollbar {
+.lista-hoy::-webkit-scrollbar {
   width: 5px;
 }
-.today-list::-webkit-scrollbar-track {
-  background: var(--fi-border);
+.lista-hoy::-webkit-scrollbar-track {
+  background: var(--borde);
   border-radius: 3px;
 }
-.today-list::-webkit-scrollbar-thumb {
-  background: var(--fi-accent);
+.lista-hoy::-webkit-scrollbar-thumb {
+  background: var(--color-primary);
   border-radius: 3px;
 }
-.today-list {
+.lista-hoy {
   scrollbar-width: thin;
-  scrollbar-color: var(--fi-accent) var(--fi-border);
+  scrollbar-color: var(--color-primary) var(--borde);
 }
 
-.today-item {
+.item-hoy {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
-  background: var(--fi-bg-card);
   border-radius: 8px;
-  box-shadow: var(--fi-shadow-item);
+  box-shadow: var(--sombra-item);
 }
 
-.ex-icon {
-  font-size: 16px;
+.icono-ejercicio {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 
-.ex-svg-icon {
+.svg-ejercicio {
   width: 18px;
   height: 18px;
   display: block;
   color: currentColor;
 }
 
-.ex-name {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--fi-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.info-ejercicio {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
   flex: 1;
 }
 
-.ex-muscle {
+.nombre-ejercicio {
+  font-size: 12px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grupo-ejercicio {
   font-size: 9px;
   font-weight: 500;
-  color: var(--fi-text-sec);
   flex-shrink: 0;
   margin-right: 2px;
 }
 
-.routine-item {
-  border-left: 3px solid var(--color-primary, #00897B);
-  cursor: default;
+.series-ejercicio {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
 }
 
-.ex-value-wrap {
+.fila-serie {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.etiqueta-serie {
+  font-size: 9px;
+  font-weight: 600;
+  min-width: 12px;
+}
+
+.contenedor-valor {
   flex-shrink: 0;
 }
 
-.ex-value-input {
+.entrada-valor {
   width: 46px;
   padding: 3px 4px;
-  border: 1px solid var(--fi-border);
+  border: 1px solid;
   border-radius: 6px;
-  background: var(--fi-bg);
-  color: var(--fi-text);
   font-size: 12px;
   font-weight: 600;
   text-align: center;
@@ -1019,11 +1018,7 @@ const bodyLabels = computed<BodyLabel[]>(() => {
   transition: border-color 0.15s;
 }
 
-.ex-value-input:focus {
-  border-color: var(--fi-accent);
-}
-
-.check-wrap {
+.envoltura-check {
   position: relative;
   width: 24px;
   height: 24px;
@@ -1031,7 +1026,7 @@ const bodyLabels = computed<BodyLabel[]>(() => {
   cursor: pointer;
 }
 
-.check-input {
+.entrada-check {
   position: absolute;
   opacity: 0;
   width: 100%;
@@ -1039,11 +1034,11 @@ const bodyLabels = computed<BodyLabel[]>(() => {
   cursor: pointer;
 }
 
-.check-circle {
+.circulo-check {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  border: 2px solid var(--fi-border);
+  border: 2px solid;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1051,22 +1046,19 @@ const bodyLabels = computed<BodyLabel[]>(() => {
   box-sizing: border-box;
 }
 
-.check-circle.checked {
-  background: var(--fi-accent);
-  border-color: var(--fi-accent);
-}
-
-.check-svg {
+.svg-check {
   width: 16px;
   height: 16px;
 }
 
-.add-exercise-btn {
+.boton-agregar-ejercicio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 8px;
-  border: 1px dashed var(--fi-border);
+  border: 1px dashed;
   border-radius: 8px;
   background: transparent;
-  color: var(--fi-text-sec);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -1074,51 +1066,21 @@ const bodyLabels = computed<BodyLabel[]>(() => {
   font-family: inherit;
 }
 
-.add-exercise-btn:hover {
-  border-color: var(--fi-accent);
-  color: var(--fi-accent);
-  background: rgba(229, 57, 53, 0.04);
+.icono-agregar {
+  width: 18px;
+  height: 18px;
+  color: inherit;
+  opacity: 0.8;
 }
 
-.today-empty {
+.hoy-vacio {
   text-align: center;
   padding: 20px 0;
   font-size: 13px;
-  color: var(--fi-text-sec);
 }
 
-/* ======================== SETS IN TODAY LIST ======================== */
-
-.ex-info {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-  flex: 1;
-}
-
-.ex-sets {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.ex-set-row {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.set-label {
-  font-size: 9px;
-  font-weight: 600;
-  color: var(--fi-text-sec);
-  min-width: 12px;
-}
-
-/* ======================== ADD EXERCISE DIALOG ======================== */
-
-.dialog-overlay {
+/* Diálogo para agregar ejercicio */
+.fondo-dialogo {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.45);
@@ -1128,8 +1090,7 @@ const bodyLabels = computed<BodyLabel[]>(() => {
   z-index: 2000;
 }
 
-.add-dialog {
-  background: var(--fi-bg-card);
+.dialogo-agregar {
   border-radius: 16px;
   padding: 24px;
   width: 360px;
@@ -1142,49 +1103,43 @@ const bodyLabels = computed<BodyLabel[]>(() => {
   box-shadow: 0 8px 32px rgba(0,0,0,0.15);
 }
 
-.dialog-title {
+.titulo-dialogo {
   font-size: 18px;
   font-weight: 700;
-  color: var(--fi-text);
   margin: 0;
 }
 
-.dialog-field {
+.campo-dialogo {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.dialog-label {
+.etiqueta-campo {
   font-size: 11px;
   font-weight: 600;
-  color: var(--fi-text-sec);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-.dialog-input {
+.entrada-dialogo {
   padding: 8px 10px;
-  border: 1px solid var(--fi-border);
+  border: 1px solid;
   border-radius: 8px;
-  background: var(--fi-bg);
-  color: var(--fi-text);
   font-size: 14px;
   font-family: inherit;
   outline: none;
   transition: border-color 0.15s;
 }
 
-.dialog-input:focus {
-  border-color: var(--fi-accent);
+.entrada-dialogo:focus {
+  border-color: var(--color-primary);
 }
 
-.dialog-select {
+.select-dialogo {
   padding: 8px 10px;
-  border: 1px solid var(--fi-border);
+  border: 1px solid;
   border-radius: 8px;
-  background: var(--fi-bg);
-  color: var(--fi-text);
   font-size: 14px;
   font-family: inherit;
   outline: none;
@@ -1193,22 +1148,20 @@ const bodyLabels = computed<BodyLabel[]>(() => {
   appearance: auto;
 }
 
-.dialog-select:focus {
-  border-color: var(--fi-accent);
+.select-dialogo:focus {
+  border-color: var(--color-primary);
 }
 
-.dialog-toggle {
+.botones-tipo {
   display: flex;
   gap: 4px;
 }
 
-.dialog-toggle button {
+.botones-tipo button {
   flex: 1;
   padding: 8px;
-  border: 1px solid var(--fi-border);
+  border: 1px solid;
   border-radius: 8px;
-  background: var(--fi-bg);
-  color: var(--fi-text);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -1216,25 +1169,18 @@ const bodyLabels = computed<BodyLabel[]>(() => {
   transition: all 0.15s;
 }
 
-.dialog-toggle button.active {
-  background: var(--fi-accent);
-  border-color: var(--fi-accent);
-  color: #fff;
-}
-
-.stepper {
+.incrementador {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.step-btn {
+.boton-paso {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  border: 1px solid var(--fi-border);
-  background: var(--fi-bg);
-  color: var(--fi-text);
+  border: 1px solid;
+  background: transparent;
   font-size: 18px;
   font-weight: 600;
   cursor: pointer;
@@ -1245,59 +1191,51 @@ const bodyLabels = computed<BodyLabel[]>(() => {
   transition: all 0.15s;
 }
 
-.step-btn:hover:not(:disabled) {
-  border-color: var(--fi-accent);
-  color: var(--fi-accent);
-}
-
-.step-btn:disabled {
+.boton-paso:disabled {
   opacity: 0.4;
   cursor: default;
 }
 
-.step-value {
+.valor-paso {
   font-size: 18px;
   font-weight: 700;
-  color: var(--fi-text);
   min-width: 24px;
   text-align: center;
 }
 
-.dialog-sets-reps {
+.lista-repeticiones {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.set-rep-row {
+.fila-repeticion {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.set-rep-label {
+.etiqueta-repeticion {
   font-size: 13px;
   font-weight: 500;
-  color: var(--fi-text);
   min-width: 48px;
 }
 
-.rep-input {
+.entrada-repeticion {
   width: 64px;
 }
 
-.set-rep-unit {
+.unidad-repeticion {
   font-size: 12px;
-  color: var(--fi-text-sec);
 }
 
-.dialog-actions {
+.acciones-dialogo {
   display: flex;
   gap: 8px;
   margin-top: 4px;
 }
 
-.dialog-btn {
+.boton-dialogo {
   flex: 1;
   padding: 10px;
   border: none;
@@ -1309,74 +1247,60 @@ const bodyLabels = computed<BodyLabel[]>(() => {
   transition: all 0.15s;
 }
 
-.dialog-btn.cancel {
-  background: var(--fi-border);
-  color: var(--fi-text);
+.boton-dialogo.cancelar:hover {
+  opacity: 0.8;
 }
 
-.dialog-btn.cancel:hover {
-  background: var(--fi-text-sec);
-  color: #fff;
-}
-
-.dialog-btn.confirm {
-  background: var(--fi-accent);
-  color: #fff;
-}
-
-.dialog-btn.confirm:hover:not(:disabled) {
+.boton-dialogo.confirmar:hover:not(:disabled) {
   opacity: 0.85;
 }
 
-.dialog-btn.confirm:disabled {
+.boton-dialogo.confirmar:disabled {
   opacity: 0.4;
   cursor: default;
 }
 
-/* ======================== EDIT FORM (SLIDE PANEL) ======================== */
-
-.edit-form {
+/* Formulario de edición en panel deslizante */
+.formulario-editar {
   padding: 0 4px 20px;
 }
 
-.edit-fields {
+.campos-editar {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.edit-sets {
+.series-editar {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.edit-set-row {
+.fila-editar-serie {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.edit-set-field {
+.campo-editar-serie {
   display: flex;
   align-items: center;
   gap: 4px;
   font-size: 11px;
   font-weight: 500;
-  color: var(--fi-text-sec);
 }
 
-.edit-set-field .rep-input {
+.campo-editar-serie .entrada-repeticion {
   width: 48px;
 }
 
-.edit-set-del {
+.boton-eliminar-serie {
   width: 24px;
   height: 24px;
   border: none;
   border-radius: 50%;
   background: transparent;
-  color: var(--fi-text-sec);
   font-size: 18px;
   cursor: pointer;
   display: flex;
@@ -1385,17 +1309,15 @@ const bodyLabels = computed<BodyLabel[]>(() => {
   transition: all 0.15s;
 }
 
-.edit-set-del:hover {
+.boton-eliminar-serie:hover {
   background: rgba(229,57,53,0.1);
-  color: var(--fi-accent);
 }
 
-.edit-add-set {
+.boton-agregar-serie {
   padding: 6px;
-  border: 1px dashed var(--fi-border);
+  border: 1px dashed;
   border-radius: 8px;
   background: transparent;
-  color: var(--fi-text-sec);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -1403,48 +1325,42 @@ const bodyLabels = computed<BodyLabel[]>(() => {
   transition: all 0.15s;
 }
 
-.edit-add-set:hover {
-  border-color: var(--fi-accent);
-  color: var(--fi-accent);
-}
-
-.panel-placeholder {
-  color: var(--color-text-secondary);
+.texto-placeholder {
   text-align: center;
   margin-top: 40px;
 }
 
 @media (max-width: 640px) {
-  .charts-row {
+  .fila-graficos {
     flex-direction: column;
     padding: 10px;
     gap: 8px;
   }
-  .chart-box {
+  .caja-grafico {
     padding: 8px;
   }
-  .bottom-section {
+  .seccion-inferior {
     flex-direction: column;
     padding: 0 10px 8px;
     gap: 8px;
   }
-  .right-panel {
+  .panel-derecho {
     max-width: 100%;
   }
-  .left-panel {
+  .panel-izquierdo {
     min-height: 180px;
   }
-  .body-space {
+  .espacio-cuerpo {
     min-height: 160px;
   }
-  .today-title {
+  .titulo-hoy {
     font-size: 12px;
     padding: 8px 10px 4px;
   }
-  .today-list {
+  .lista-hoy {
     padding: 0 10px 8px;
   }
-  .ex-value-input {
+  .entrada-valor {
     width: 40px;
     font-size: 11px;
   }

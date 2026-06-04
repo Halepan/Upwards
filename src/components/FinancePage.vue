@@ -493,7 +493,7 @@ function formatCurrency(n: number): string {
           :series="financeSeries"
           :view-mode="viewMode"
           :yFormat="(v: number) => '$' + v.toLocaleString('es-MX')"
-          :dark-mode="isDark === 'dark'"
+          :dark-mode="isDark"
           @update:view-mode="viewMode = $event"
         />
       </div>
