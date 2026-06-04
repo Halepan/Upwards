@@ -46,7 +46,7 @@ const emit = defineEmits<{ close: [] }>()
 
 .ctx-menu {
   position: absolute;
-  min-width: 160px;
+  min-width: min(160px, 80vw);
   background: var(--color-surface, #fff);
   border-radius: 12px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);

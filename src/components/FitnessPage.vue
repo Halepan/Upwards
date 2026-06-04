@@ -839,7 +839,6 @@ const etiquetasCorporales = computed<EtiquetaCorporal[]>(() => {
   border-radius: 4px;
   box-shadow: 0 1px 2px rgba(0,0,0,0.08);
   z-index: 1;
-  pointer-events: none;
   transform: translateY(-50%);
 }
 

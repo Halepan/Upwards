@@ -261,7 +261,7 @@ function onBackToLogin(): void {
 .register-panel {
   width: 100%;
   max-width: 400px;
-  padding: 32px;
+  padding: clamp(16px, 4vw, 32px);
   border-radius: 16px;
   box-shadow: 0 8px 30px rgba(0,0,0,0.12);
   box-sizing: border-box;
@@ -269,8 +269,8 @@ function onBackToLogin(): void {
 }
 
 .panel-title {
-  margin: 0 0 24px;
-  font-size: 24px;
+  margin: 0 0 clamp(16px, 3vw, 24px);
+  font-size: clamp(20px, 5vw, 24px);
   font-weight: 600;
   text-align: center;
 }

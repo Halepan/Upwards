@@ -161,7 +161,7 @@ function onRegisterClick(): void {
 .login-panel {
   width: 100%;
   max-width: 400px;
-  padding: 32px;
+  padding: clamp(16px, 4vw, 32px);
   border-radius: 16px;
   box-sizing: border-box;
   transition: background 0.3s, color 0.3s, box-shadow 0.3s;
@@ -169,7 +169,7 @@ function onRegisterClick(): void {
 
 .panel-title {
   margin: 0 0 24px;
-  font-size: 24px;
+  font-size: clamp(20px, 5vw, 24px);
   font-weight: 600;
   text-align: center;
 }

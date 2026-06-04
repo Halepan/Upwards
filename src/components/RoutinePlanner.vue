@@ -262,9 +262,8 @@ function cancel() {
 /* ===================== ITEMS PANEL ===================== */
 
 .rp-items-panel {
-  width: 25%;
-  min-width: 200px;
-  max-width: 300px;
+  width: clamp(180px, 25%, 300px);
+  min-width: unset;
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--color-border, #e8e8e8);
@@ -486,5 +485,37 @@ function cancel() {
 .rp-save-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .rp-body {
+    flex-direction: column;
+  }
+  .rp-items-panel {
+    width: 100%;
+    max-width: 100%;
+    max-height: 30vh;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border, #e8e8e8);
+  }
+  .rp-drop-zone {
+    margin: 8px;
+    padding: 12px;
+    min-height: 120px;
+  }
+  .rp-header {
+    padding: 8px 12px;
+  }
+  .rp-name-input {
+    font-size: 13px;
+    padding: 6px 10px;
+  }
+  .rp-footer {
+    padding: 8px 12px;
+  }
+  .rp-footer-btn {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
 }
 </style>

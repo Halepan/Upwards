@@ -57,7 +57,7 @@
 
 html {
   font-family: var(--font-family);
-  font-size: 16px;
+  font-size: clamp(14px, 1vw + 13px, 16px);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

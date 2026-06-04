@@ -333,14 +333,20 @@ function blockLabelBot(): string {
 }
 
 function navigateBlock(delta: number) {
-  const d = new Date(roadmapStart.value)
+  const d = snapToBlockStart(roadmapStart.value)
   const step = blockSizeMonths()
   d.setMonth(d.getMonth() + delta * step)
   const earliest = new Date(DATA_START.getFullYear(), DATA_START.getMonth(), 1)
-  const latest = new Date(today.getFullYear(), today.getMonth(), 1)
+  const latest = snapToBlockStart(today)
   if (d < earliest) roadmapStart.value = earliest
   else if (d > latest) roadmapStart.value = latest
   else roadmapStart.value = d
+}
+
+function snapToBlockStart(date: Date): Date {
+  const m = blockSizeMonths()
+  const snapped = new Date(date.getFullYear(), Math.floor(date.getMonth() / m) * m, 1)
+  return snapped
 }
 
 // Refs para sincronización
@@ -375,8 +381,7 @@ function onGridScroll() { syncHorizontalScroll('grid') }
 
 // Jump to current block on mount / view change
 function jumpToCurrent() {
-  const now = new Date(today.getFullYear(), today.getMonth(), 1)
-  roadmapStart.value = now
+  roadmapStart.value = snapToBlockStart(today)
 }
 
 onMounted(async () => {

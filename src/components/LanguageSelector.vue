@@ -93,7 +93,7 @@ function close(): void {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 12px;
+  padding: clamp(4px, 1.5vw, 6px) clamp(8px, 2vw, 12px);
   border-radius: 8px;
   border: 1px solid;
   cursor: pointer;
@@ -132,7 +132,7 @@ function close(): void {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  min-width: 170px;
+  min-width: min(170px, 80vw);
   list-style: none;
   padding: 4px;
   margin: 0;

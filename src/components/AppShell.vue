@@ -215,11 +215,11 @@ function closeMenu(): void {
   top: 0;
   left: 0;
   right: 0;
-  height: 56px;
+  height: clamp(48px, 7vw, 56px);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 clamp(8px, 2vw, 16px);
   border-bottom: 1px solid;
   z-index: 50;
   transition: background 0.3s, border-color 0.3s;
@@ -372,8 +372,8 @@ function closeMenu(): void {
 
 .shell-content {
   flex: 1;
-  padding-top: 56px;
-  padding-bottom: 72px;
+  padding-top: clamp(48px, 7vw, 56px);
+  padding-bottom: clamp(60px, 10vw, 72px);
   overflow-y: auto;
 }
 
@@ -382,7 +382,7 @@ function closeMenu(): void {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 64px;
+  height: clamp(56px, 8vw, 64px);
   display: flex;
   border-top: 1px solid;
   z-index: 50;
@@ -433,18 +433,18 @@ function closeMenu(): void {
 
 @media (max-width: 480px) {
   .section-title {
-    font-size: 17px;
+    font-size: clamp(16px, 4vw, 17px);
   }
   .avatar-menu {
-    width: 200px;
+    width: min(200px, 85vw);
     right: -8px;
   }
   .nav-svg-icon {
-    width: 20px;
-    height: 20px;
+    width: clamp(18px, 4vw, 20px);
+    height: clamp(18px, 4vw, 20px);
   }
   .nav-label {
-    font-size: 10px;
+    font-size: clamp(9px, 2.5vw, 10px);
   }
 }
 </style>

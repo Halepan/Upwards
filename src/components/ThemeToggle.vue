@@ -60,8 +60,8 @@ const surfaceColor = computed(() => currentColors.value.surface)
 
 .slider-track {
   position: relative;
-  width: 72px;
-  height: 36px;
+  width: clamp(60px, 10vw, 72px);
+  height: clamp(30px, 5vw, 36px);
   border-radius: 18px;
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.15);
   display: flex;
@@ -72,8 +72,8 @@ const surfaceColor = computed(() => currentColors.value.surface)
 }
 
 .track-icon {
-  width: 20px;
-  height: 20px;
+  width: clamp(18px, 3vw, 20px);
+  height: clamp(18px, 3vw, 20px);
   display: block;
   opacity: 0.8;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
@@ -84,8 +84,8 @@ const surfaceColor = computed(() => currentColors.value.surface)
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 30px;
-  height: 30px;
+  width: clamp(26px, 4vw, 30px);
+  height: clamp(26px, 4vw, 30px);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -96,8 +96,8 @@ const surfaceColor = computed(() => currentColors.value.surface)
 }
 
 .thumb-icon {
-  width: 18px;
-  height: 18px;
+  width: clamp(16px, 2.5vw, 18px);
+  height: clamp(16px, 2.5vw, 18px);
   display: block;
 }
 </style>

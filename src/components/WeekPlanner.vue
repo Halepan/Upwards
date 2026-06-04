@@ -381,9 +381,8 @@ function repeatLastWeek() {
 /* ===================== ITEMS PANEL (25%) ===================== */
 
 .items-panel {
-  width: 25%;
-  min-width: 200px;
-  max-width: 300px;
+  width: clamp(180px, 25%, 300px);
+  min-width: unset;
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--color-border, #e8e8e8);
@@ -532,7 +531,7 @@ function repeatLastWeek() {
 
 .day-column {
   flex: 1;
-  min-width: 90px;
+  min-width: clamp(60px, 12vw, 90px);
   background: var(--color-surface, #fff);
   border-radius: 8px;
   border: 2px solid transparent;
@@ -551,7 +550,7 @@ function repeatLastWeek() {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 10px 4px;
+  padding: clamp(6px, 1.5vw, 10px) 4px;
   border-bottom: 1px solid var(--color-border, #e8e8e8);
   flex-shrink: 0;
 }
@@ -757,5 +756,60 @@ function repeatLastWeek() {
 .confirm-fade-enter-from,
 .confirm-fade-leave-to {
   opacity: 0;
+}
+
+@media (max-width: 640px) {
+  .planner-body {
+    flex-direction: column;
+  }
+  .items-panel {
+    width: 100%;
+    max-width: 100%;
+    max-height: 30vh;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border, #e8e8e8);
+  }
+  .week-grid {
+    padding: 6px;
+    gap: 4px;
+  }
+  .day-column {
+    min-width: 0;
+    flex: 1;
+  }
+  .day-label {
+    writing-mode: horizontal-tb;
+    transform: none;
+    font-size: 9px;
+  }
+  .day-header {
+    padding: 6px 2px;
+  }
+  .day-items {
+    padding: 4px;
+    gap: 3px;
+  }
+  .day-item-chip {
+    padding: 3px 4px;
+  }
+  .chip-name {
+    font-size: 8px;
+  }
+  .planner-footer {
+    padding: 8px 12px;
+  }
+  .footer-btn {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+  .repeat-btn {
+    display: none;
+  }
+  .planner-header {
+    padding: 8px 12px;
+  }
+  .planner-title {
+    font-size: 14px;
+  }
 }
 </style>

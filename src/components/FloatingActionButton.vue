@@ -47,8 +47,8 @@ defineExpose({ expanded })
 <style scoped>
 .fab-wrapper {
   position: fixed;
-  bottom: 88px;
-  right: 20px;
+  bottom: clamp(76px, 12vw, 88px);
+  right: clamp(12px, 3vw, 20px);
   z-index: 50;
   display: flex;
   flex-direction: column;
@@ -97,13 +97,13 @@ defineExpose({ expanded })
 }
 
 .fab {
-  width: 56px;
-  height: 56px;
+  width: clamp(48px, 8vw, 56px);
+  height: clamp(48px, 8vw, 56px);
   border: none;
   border-radius: 50%;
   background: var(--color-primary);
   color: var(--color-on-primary);
-  font-size: 28px;
+  font-size: clamp(24px, 4vw, 28px);
   cursor: pointer;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   display: flex;
