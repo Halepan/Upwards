@@ -2,7 +2,15 @@ node_modules/
 dist/
 .env
 .DS_Store
-prueba.ts
-*.py
+src/prueba.ts
+prueba.py
 CHANGELOG_REFACTOR.txt
 src/components/icongallery.vue
+src/assets/hero.png
+src/assets/vue.svg
+public/stilhoutes/
+public/lightico.svg
+public/icondark.svg
+public/favicon.svg
+public/icons.svg
+senior-constitution.md

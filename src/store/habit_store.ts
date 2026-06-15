@@ -9,50 +9,63 @@ import { HabitWeekPlanRepository } from '../repository/habit_week_plan_repositor
 import { HabitService, type CreateHabitDTO, type WeeklyProgress } from '../service/habit_service'
 import { BaseStore } from './base_store'
 
-/* Store reactiva de hábitos. Expone la lista de hábitos, logs diarios,
-   progreso semanal y operaciones de creación, marcado y archivado. */
 export class HabitStore extends BaseStore<Habit> {
   protected repository: HabitRepository
   private service: HabitService
+  private logRepo: HabitLogRepository
 
   logs: Ref<HabitLog[]>
+  allLogs: Ref<HabitLog[]>
   weeklyProgress: Ref<WeeklyProgress | null>
   selectedHabit: Ref<Habit | null>
 
   constructor() {
     super()
     const habitRepo = new HabitRepository(db.habits)
-    const logRepo = new HabitLogRepository(db.habit_logs)
+    this.logRepo = new HabitLogRepository(db.habit_logs)
     const weekRepo = new WeekRepository(db.weeks)
     const weekPlanRepo = new HabitWeekPlanRepository(db.habit_week_plans)
 
     this.repository = habitRepo
-    this.service = new HabitService(habitRepo, logRepo, weekRepo, weekPlanRepo)
+    this.service = new HabitService(habitRepo, this.logRepo, weekRepo, weekPlanRepo)
 
     this.logs = ref<HabitLog[]>([]) as Ref<HabitLog[]>
+    this.allLogs = ref<HabitLog[]>([]) as Ref<HabitLog[]>
     this.weeklyProgress = ref<WeeklyProgress | null>(null)
     this.selectedHabit = ref<Habit | null>(null) as Ref<Habit | null>
   }
 
-  /* Crea un nuevo hábito y lo agrega al estado local. */
+  async loadAll(): Promise<void> {
+    await this.fetchAll()
+    this.allLogs.value = await this.logRepo.findAll()
+  }
+
   async createHabit(data: CreateHabitDTO): Promise<Habit> {
     const habit = await this.service.createHabit(data.userId, data)
     this._items.value.push(habit)
     return habit
   }
 
-  /* Marca el estado diario de un hábito y refresca los logs. */
   async markDay(habitId: number, date: string, status: HabitStatus): Promise<void> {
     await this.service.markDay(habitId, date, status)
     await this.refreshLogs(habitId)
   }
 
-  /* Calcula el progreso semanal de un hábito. */
+  async toggleDay(habitId: number, date: string): Promise<void> {
+    const existing = this.allLogs.value.find(l => l.habitId === habitId && l.date === date)
+    if (existing) {
+      const newStatus: HabitStatus = existing.status === 'completed' ? 'missed' : 'completed'
+      await this.service.markDay(habitId, date, newStatus)
+    } else {
+      await this.service.markDay(habitId, date, 'completed')
+    }
+    this.allLogs.value = await this.logRepo.findAll()
+  }
+
   async loadWeeklyProgress(habitId: number, weekStart: string): Promise<void> {
     this.weeklyProgress.value = await this.service.getWeeklyProgress(habitId, weekStart)
   }
 
-  /* Archivado lógico de un hábito. */
   async archiveHabit(habitId: number): Promise<void> {
     await this.repository.archiveHabit(habitId)
     const habit = this.getById(habitId)
@@ -61,17 +74,20 @@ export class HabitStore extends BaseStore<Habit> {
     }
   }
 
-  /* Selecciona un hábito y carga sus logs asociados. */
+  async deleteHabit(habitId: number): Promise<void> {
+    await this.repository.delete(habitId)
+    this._items.value = this._items.value.filter(h => (h as any).id !== habitId)
+    this.allLogs.value = this.allLogs.value.filter(l => l.habitId !== habitId)
+  }
+
   async selectHabit(habit: Habit): Promise<void> {
     this.selectedHabit.value = habit
     await this.refreshLogs(habit.id!)
   }
 
-  /* Recarga los logs del hábito seleccionado. */
   private async refreshLogs(habitId: number): Promise<void> {
     if (!this.selectedHabit.value || this.selectedHabit.value.id !== habitId) return
-    const logRepo = new HabitLogRepository(db.habit_logs)
-    this.logs.value = await logRepo.findByHabitInRange(
+    this.logs.value = await this.logRepo.findByHabitInRange(
       habitId,
       this.getWeekStart(),
       this.getWeekEnd()

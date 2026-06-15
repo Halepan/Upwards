@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useLongPress } from '../composables/useLongPress'
 import { useTheme } from '../composables/useTheme'
 import ContextMenu from './ContextMenu.vue'
@@ -15,6 +15,11 @@ import editIcon from '../assets/icons/mdi--check-outline.svg'
 import deleteIcon from '../assets/icons/weui--delete-outlined.svg'
 import alertIcon from '../assets/icons/weui--delete-filled.svg'
 import checkIcon from '../assets/icons/mdi--check-bold.svg'
+import { financeStore, useAuthStore } from '../store'
+import { storeToRefs } from 'pinia'
+
+const auth = useAuthStore()
+const { currentUser } = storeToRefs(auth)
 
 type Trend = 'up' | 'down' | 'flat'
 
@@ -42,18 +47,22 @@ const emit = defineEmits<{
   'close-history': []
 }>()
 
-const accounts = ref<AccountCard[]>([
-  { id: 1, name: 'Gasto diario', balance: 3200, prevBalance: 2800, color: '#00897b', spent: 2700, trend: 'up', derivations: [] },
-  { id: 2, name: 'Ahorro', balance: 18500, prevBalance: 19200, color: '#1565c0', spent: 0, trend: 'down', derivations: [{ sourceAccountId: 1, percentage: 20 }] },
-  { id: 3, name: 'Inversión', balance: 45300, prevBalance: 45300, color: '#e65100', spent: 0, trend: 'flat', derivations: [{ sourceAccountId: 1, percentage: 10 }] },
-  { id: 4, name: 'Donación', balance: 1200, prevBalance: 1100, color: '#6a1b9a', spent: 0, trend: 'up', derivations: [{ sourceAccountId: 1, percentage: 5 }] },
-  { id: 5, name: 'Vivienda', balance: 5800, prevBalance: 6200, color: '#2e7d32', spent: 5100, trend: 'down', derivations: [] },
-  { id: 6, name: 'Transporte', balance: 950, prevBalance: 870, color: '#f9a825', spent: 800, trend: 'up', derivations: [] },
-  { id: 7, name: 'Salud', balance: 3400, prevBalance: 3200, color: '#ec407a', spent: 2100, trend: 'up', derivations: [] },
-  { id: 8, name: 'Educación', balance: 12000, prevBalance: 12500, color: '#ab47bc', spent: 0, trend: 'down', derivations: [{ sourceAccountId: 1, percentage: 10 }] },
-  { id: 9, name: 'Vacaciones', balance: 7800, prevBalance: 7800, color: '#26c6da', spent: 0, trend: 'flat', derivations: [{ sourceAccountId: 1, percentage: 5 }] },
-  { id: 10, name: 'Emergencia', balance: 15000, prevBalance: 14000, color: '#8d6e63', spent: 0, trend: 'up', derivations: [] },
-])
+const accounts = ref<AccountCard[]>([])
+
+function initAccounts() {
+  accounts.value = financeStore.items.length > 0
+    ? financeStore.items.map((a: any) => ({
+        id: a.id!,
+        name: a.name,
+        balance: a.balance,
+        prevBalance: a.balance,
+        color: '#00897b',
+        spent: 0,
+        trend: 'flat' as Trend,
+        derivations: [],
+      }))
+    : []
+}
 
 const budgetAlert = computed(() => {
   for (const acct of accounts.value) {
@@ -77,36 +86,31 @@ interface HistoryEntry {
   account: string
 }
 
-const history = ref<HistoryEntry[]>([
-  { id: 1, concept: 'Nómina', amount: 2400, type: 'income', category: '', date: '2023-01-30', account: 'Gasto diario' },
-  { id: 2, concept: 'Supermercado', amount: -185, type: 'expense', category: 'Alimentación', date: '2023-02-05', account: 'Gasto diario' },
-  { id: 3, concept: 'Freelance', amount: 800, type: 'income', category: '', date: '2023-03-15', account: 'Gasto diario' },
-  { id: 4, concept: 'Gasolina', amount: -55, type: 'expense', category: 'Transporte', date: '2023-04-10', account: 'Transporte' },
-  { id: 5, concept: 'Dividendos', amount: 120, type: 'income', category: '', date: '2023-05-01', account: 'Inversión' },
-  { id: 6, concept: 'Netflix', amount: -15.99, type: 'expense', category: 'Ocio', date: '2023-06-12', account: 'Gasto diario' },
-  { id: 7, concept: 'Traslado a ahorros', amount: -500, type: 'expense', category: 'Otros', date: '2023-07-01', account: 'Ahorro' },
-  { id: 8, concept: 'Nómina', amount: 2600, type: 'income', category: '', date: '2023-08-30', account: 'Gasto diario' },
-  { id: 9, concept: 'Curso online', amount: -200, type: 'expense', category: 'Otros', date: '2023-09-05', account: 'Educación' },
-  { id: 10, concept: 'Renta', amount: -850, type: 'expense', category: 'Vivienda', date: '2023-10-01', account: 'Vivienda' },
-  { id: 11, concept: 'Nómina', amount: 2700, type: 'income', category: '', date: '2023-11-30', account: 'Gasto diario' },
-  { id: 12, concept: 'Seguro médico', amount: -180, type: 'expense', category: 'Salud', date: '2023-12-10', account: 'Salud' },
-  { id: 13, concept: 'Nómina', amount: 2800, type: 'income', category: '', date: '2024-01-30', account: 'Gasto diario' },
-  { id: 14, concept: 'Supermercado', amount: -210, type: 'expense', category: 'Alimentación', date: '2024-02-14', account: 'Gasto diario' },
-  { id: 15, concept: 'Venta de acciones', amount: 1500, type: 'income', category: '', date: '2024-03-20', account: 'Inversión' },
-  { id: 16, concept: 'Gasolina', amount: -60, type: 'expense', category: 'Transporte', date: '2024-04-08', account: 'Transporte' },
-  { id: 17, concept: 'Dividendos', amount: 150, type: 'income', category: '', date: '2024-05-01', account: 'Inversión' },
-  { id: 18, concept: 'Electricidad', amount: -95, type: 'expense', category: 'Vivienda', date: '2024-06-03', account: 'Vivienda' },
-  { id: 19, concept: 'Traslado a ahorros', amount: -600, type: 'expense', category: 'Otros', date: '2024-07-01', account: 'Ahorro' },
-  { id: 20, concept: 'Nómina', amount: 3000, type: 'income', category: '', date: '2024-08-30', account: 'Gasto diario' },
-  { id: 21, concept: 'Hotel', amount: -450, type: 'expense', category: 'Ocio', date: '2024-09-15', account: 'Vacaciones' },
-  { id: 22, concept: 'Farmacia', amount: -45, type: 'expense', category: 'Salud', date: '2024-10-22', account: 'Salud' },
-  { id: 23, concept: 'Nómina', amount: 3100, type: 'income', category: '', date: '2024-11-29', account: 'Gasto diario' },
-  { id: 24, concept: 'Donación', amount: -100, type: 'expense', category: 'Otros', date: '2024-12-25', account: 'Donación' },
-  { id: 25, concept: 'Nómina', amount: 3200, type: 'income', category: '', date: '2025-01-30', account: 'Gasto diario' },
-  { id: 26, concept: 'Supermercado', amount: -230, type: 'expense', category: 'Alimentación', date: '2025-02-10', account: 'Gasto diario' },
-  { id: 27, concept: 'Freelance', amount: 1200, type: 'income', category: '', date: '2025-03-12', account: 'Gasto diario' },
-  { id: 28, concept: 'Renta', amount: -900, type: 'expense', category: 'Vivienda', date: '2025-04-01', account: 'Vivienda' },
-])
+const history = ref<HistoryEntry[]>([])
+
+function initHistory() {
+  const entries: HistoryEntry[] = [
+    ...financeStore.incomes.value.map((inc: any) => ({
+      id: inc.id!,
+      concept: inc.note || 'Ingreso',
+      amount: inc.amount,
+      type: 'income' as const,
+      category: inc.classification || '',
+      date: inc.date,
+      account: 'Cuenta',
+    })),
+    ...financeStore.expenses.value.map((exp: any) => ({
+      id: exp.id!,
+      concept: exp.note || 'Gasto',
+      amount: -exp.amount,
+      type: 'expense' as const,
+      category: exp.category || '',
+      date: exp.date,
+      account: 'Cuenta',
+    })),
+  ]
+  history.value = entries
+}
 
 const filterAccount = ref('')
 const filterType = ref<'all' | 'income' | 'expense'>('all')
@@ -132,14 +136,30 @@ const filterCategories = computed(() => {
   return Array.from(cats).sort()
 })
 
-const categories = ref([
-  { label: 'Alimentación', value: 28, color: '#ef5350' },
-  { label: 'Vivienda', value: 32, color: '#42a5f5' },
-  { label: 'Transporte', value: 12, color: '#ff7043' },
-  { label: 'Salud', value: 10, color: '#66bb6a' },
-  { label: 'Ocio', value: 8, color: '#ffa726' },
-  { label: 'Otros', value: 10, color: '#bdbdbd' },
-])
+const DONUT_COLORS = ['#ef5350', '#42a5f5', '#ff7043', '#66bb6a', '#ffa726', '#ab47bc', '#26c6da', '#bdbdbd']
+
+const categories = computed(() => {
+  const expenseEntries = history.value.filter(e => e.type === 'expense' && e.category)
+  const totals: Record<string, number> = {}
+  for (const e of expenseEntries) {
+    const cat = e.category || 'Otros'
+    totals[cat] = (totals[cat] || 0) + Math.abs(e.amount)
+  }
+  const totalAmount = Object.values(totals).reduce((s, v) => s + v, 0)
+  if (totalAmount === 0) return []
+  let colorIndex = 0
+  return Object.entries(totals).map(([label, value]) => {
+    const pct = Math.round((value / totalAmount) * 100)
+    const color = DONUT_COLORS[colorIndex++ % DONUT_COLORS.length]
+    return { label, value: pct, color }
+  })
+})
+
+const totalExpenseAmount = computed(() => {
+  return history.value
+    .filter(e => e.type === 'expense')
+    .reduce((s, e) => s + Math.abs(e.amount), 0)
+})
 
 const viewMode = ref<'diario' | 'semanal' | 'mensual'>('diario')
 
@@ -147,6 +167,7 @@ const circumference = 2 * Math.PI * 40
 
 const segments = computed(() => {
   const total = categories.value.reduce((s, c) => s + c.value, 0)
+  if (total === 0) return []
   let offset = 0
   return categories.value.map(c => {
     const ratio = c.value / total
@@ -159,48 +180,12 @@ const segments = computed(() => {
 
 const { isDark } = useTheme()
 
-function seededRand(seed: number) {
-  let s = seed
-  return () => {
-    s = (s * 1664525 + 1013904223) & 0xffffffff
-    return (s >>> 0) / 0xffffffff
-  }
-}
-
-function generateData(
-  startVal: number,
-  volatility: number,
-  drift: number,
-  seed: number,
-  minVal = 10,
-  maxVal = 10000,
-): { x: Date; y: number }[] {
-  const rand = seededRand(seed)
-  let val = startVal
-  const data: { x: Date; y: number }[] = []
-  const start = new Date(2023, 0, 1)
-  const end = new Date(2026, 11, 31)
-  const cur = new Date(start)
-
-  while (cur <= end) {
-    val += drift + (rand() - 0.5) * volatility
-    val = Math.max(minVal, Math.min(maxVal, val))
-    data.push({ x: new Date(cur), y: Math.round(val) })
-    cur.setDate(cur.getDate() + 1)
-  }
-  return data
-}
-
 const financeSeries = computed<ChartSeries[]>(() =>
-  accounts.value.map(acct => {
-    const b = Math.max(acct.balance, 100)
-    const drift = acct.trend === 'up' ? b * 0.001 : acct.trend === 'down' ? -b * 0.001 : 0
-    return {
-      label: acct.name,
-      data: generateData(b * 0.8, b * 0.15, drift, acct.id, 0, b * 2),
-      color: acct.color,
-    }
-  })
+  accounts.value.map(acct => ({
+    label: acct.name,
+    data: [],
+    color: acct.color,
+  }))
 )
 
 const {
@@ -255,7 +240,7 @@ function openAccountForm(acct?: AccountCard) {
   editPanel.value = true
 }
 
-function saveAccount() {
+async function saveAccount() {
   if (!acctFormName.value.trim()) return
   const derivations: Derivation[] = acctFormAdvanced.value
     ? acctFormDerivations.value.filter(d => d.pct > 0).map(d => ({ sourceAccountId: d.accountId, percentage: d.pct }))
@@ -266,12 +251,23 @@ function saveAccount() {
     a.balance = acctFormBalance.value
     a.color = acctFormColor.value
     a.derivations = derivations
+    const stored = financeStore.getById(a.id)
+    if (stored) {
+      stored.name = a.name
+      ;(stored as any).balance = a.balance
+      await financeStore.save(stored as any)
+    }
   } else {
-    accounts.value.push({
-      id: Date.now() + Math.floor(Math.random() * 10000),
+    const saved = await financeStore.save({
       name: acctFormName.value.trim(),
       balance: acctFormBalance.value,
-      prevBalance: acctFormBalance.value,
+      type: 'spendable',
+    } as any)
+    accounts.value.push({
+      id: saved.id!,
+      name: saved.name,
+      balance: (saved as any).balance,
+      prevBalance: (saved as any).balance,
       color: acctFormColor.value,
       spent: 0,
       trend: 'flat',
@@ -289,7 +285,8 @@ function onLongPressAccount(acct: AccountCard, event: MouseEvent | TouchEvent): 
   ])
 }
 
-function deleteAccount(acct: AccountCard): void {
+async function deleteAccount(acct: AccountCard): Promise<void> {
+  await financeStore.deleteAccount(acct.id)
   accounts.value = accounts.value.filter(a => a.id !== acct.id)
 }
 
@@ -353,12 +350,14 @@ watch([txAccount, txAmount], () => {
   txDerivedAmounts.value = amounts
 })
 
-function saveTransaction() {
+async function saveTransaction() {
   if (!txConcept.value.trim() || txAmount.value <= 0) return
   if (txType.value === 'expense') {
     if (!txAccount.value) return
     const expenseAccount = accounts.value.find(a => a.name === txAccount.value)
-    if (expenseAccount) expenseAccount.balance -= txAmount.value
+    if (!expenseAccount) return
+    expenseAccount.balance -= txAmount.value
+    await financeStore.addExpense(expenseAccount.id, { amount: txAmount.value, category: txCategory.value, note: txConcept.value.trim(), date: txDate.value, accountId: expenseAccount.id } as any)
     history.value.push({
       id: Date.now() + Math.floor(Math.random() * 10000),
       concept: txConcept.value.trim(),
@@ -370,11 +369,10 @@ function saveTransaction() {
     })
   } else {
     const derivedList = getDerivedAccounts()
-    // Main income entry
     const source = accounts.value.find(a => a.name === txAccount.value)
     if (!source) return
-    // Full amount enters source account first
     source.balance += txAmount.value
+    await financeStore.addIncome(currentUser.value!.id!, { amount: txAmount.value, classification: txIncomeType.value === 'Donativo' ? 'give' : txIncomeType.value === 'Negocio' ? 'otro' : 'timeswap', note: txConcept.value.trim(), date: txDate.value } as any)
     history.value.push({
       id: Date.now() + Math.floor(Math.random() * 10000),
       concept: `${txConcept.value.trim()} (${txIncomeType.value})`,
@@ -385,11 +383,9 @@ function saveTransaction() {
       account: txAccount.value,
     })
 
-    // Derived entries: transfer from source to derived accounts
     for (const d of derivedList) {
       const actualAmount = txDerivedAmounts.value[d.account.name] ?? d.amount
       if (actualAmount <= 0) continue
-      // Transfer: subtract from source, add to target
       source.balance -= actualAmount
       d.account.balance += actualAmount
       history.value.push({
@@ -415,6 +411,12 @@ const fabActions: FabAction[] = [
 function formatCurrency(n: number): string {
   return '$' + n.toLocaleString('es-MX', { minimumFractionDigits: 2 })
 }
+
+onMounted(async () => {
+  await financeStore.loadAll(currentUser.value!.id!)
+  initAccounts()
+  initHistory()
+})
 </script>
 
 <template>
@@ -476,7 +478,7 @@ function formatCurrency(n: number): string {
               />
             </svg>
             <div class="donut-center">
-              <span class="donut-total">$12,400</span>
+              <span class="donut-total">{{ formatCurrency(totalExpenseAmount) }}</span>
               <span class="donut-label">este mes</span>
             </div>
           </div>

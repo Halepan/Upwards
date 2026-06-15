@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, onMounted } from 'vue'
 import { useTheme } from '../composables/useTheme'
 import { useLongPress } from '../composables/useLongPress'
 import ContextMenu from './ContextMenu.vue'
@@ -13,16 +13,15 @@ import type { FabAction } from './FloatingActionButton.vue'
 import type { ChartSeries } from './GenericChart.vue'
 import type { PlannerItem } from './WeekPlanner.vue'
 import { themeIcons, themeColors } from '../config/theme.config'
+import { fitnessStore, useAuthStore } from '../store'
+import { storeToRefs } from 'pinia'
+
+const auth = useAuthStore()
+const { currentUser } = storeToRefs(auth)
 
 /* -------------------------------------------------------------------------- */
 /*  Tipos locales                                                             */
 /* -------------------------------------------------------------------------- */
-
-interface SerieEjercicio {
-  repeticionesPrevistas: number
-  repeticionesReales: number
-  confirmada: boolean
-}
 
 interface Ejercicio {
   id: number
@@ -30,7 +29,6 @@ interface Ejercicio {
   icono: string
   grupoMuscular: string
   tipo: 'fuerza' | 'resistencia'
-  series: SerieEjercicio[]
 }
 
 interface Rutina {
@@ -41,25 +39,32 @@ interface Rutina {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Datos de ejercicios y rutinas (todos usan el icono de gym)                */
+/*  Datos de ejercicios y rutinas (inicializados desde store)                  */
 /* -------------------------------------------------------------------------- */
 
-const ejercicios = ref<Ejercicio[]>([
-  { id: 1, nombre: 'Press banca', icono: '🏋️', grupoMuscular: 'Pectoral', tipo: 'fuerza', series: [{ repeticionesPrevistas: 10, repeticionesReales: 10, confirmada: true }] },
-  { id: 2, nombre: 'Remo', icono: '🏋️', grupoMuscular: 'Dorsal', tipo: 'fuerza', series: [{ repeticionesPrevistas: 12, repeticionesReales: 10, confirmada: false }] },
-  { id: 3, nombre: 'Sentadilla', icono: '🦵', grupoMuscular: 'Piernas', tipo: 'fuerza', series: [{ repeticionesPrevistas: 15, repeticionesReales: 15, confirmada: true }] },
-  { id: 4, nombre: 'Press militar', icono: '🏋️', grupoMuscular: 'Hombros', tipo: 'fuerza', series: [{ repeticionesPrevistas: 8, repeticionesReales: 6, confirmada: false }] },
-  { id: 5, nombre: 'Cardio HIIT', icono: '🏃', grupoMuscular: 'Cardio', tipo: 'resistencia', series: [{ repeticionesPrevistas: 20, repeticionesReales: 20, confirmada: true }] },
-  { id: 6, nombre: 'Plancha', icono: '🤸', grupoMuscular: 'Core', tipo: 'resistencia', series: [{ repeticionesPrevistas: 3, repeticionesReales: 2, confirmada: false }] },
-  { id: 7, nombre: 'Curl bíceps', icono: '💪', grupoMuscular: 'Bíceps', tipo: 'resistencia', series: [{ repeticionesPrevistas: 15, repeticionesReales: 15, confirmada: true }] },
-  { id: 8, nombre: 'Fondos', icono: '💪', grupoMuscular: 'Tríceps', tipo: 'resistencia', series: [{ repeticionesPrevistas: 12, repeticionesReales: 10, confirmada: false }] },
-])
+const ejercicios = ref<Ejercicio[]>([])
+const rutinas = ref<Rutina[]>([])
 
-const rutinas = ref<Rutina[]>([
-  { id: 101, nombre: 'Push', icono: '💪', idsEjercicios: [1, 4, 8] },
-  { id: 102, nombre: 'Pull', icono: '💪', idsEjercicios: [2, 7] },
-  { id: 103, nombre: 'Piernas', icono: '🦵', idsEjercicios: [3, 6] },
-])
+function initFromStore() {
+  ejercicios.value = fitnessStore.items.length > 0
+    ? fitnessStore.items.map((e: any) => ({
+        id: e.id!,
+        nombre: e.name,
+        icono: '🏋️',
+        grupoMuscular: e.sub_type || 'General',
+        tipo: e.type as 'fuerza' | 'resistencia',
+      }))
+    : []
+  const storedRoutines = fitnessStore.routines.value
+  rutinas.value = storedRoutines.length > 0
+    ? storedRoutines.map((r: any) => ({
+        id: r.id!,
+        nombre: r.name,
+        icono: '💪',
+        idsEjercicios: [] as number[],
+      }))
+    : []
+}
 
 /* -------------------------------------------------------------------------- */
 /*  Tema e iconos                                                             */
@@ -82,57 +87,8 @@ const colorFondoInput = computed(() => coloresActuales.value.inputBg)
 /*  Datos de gráficos                                                         */
 /* -------------------------------------------------------------------------- */
 
-const gruposFuerza = ['Pectoral', 'Dorsal', 'Piernas', 'Hombros']
-const gruposResistencia = ['Cardio', 'Core', 'Bíceps', 'Tríceps']
-
-const paletaCalida = ['#e53935', '#fb8c00', '#ff5252', '#ff6d00']
-const paletaFria = ['#1e88e5', '#43a047', '#00acc1', '#7b1fa2']
-
-const coloresCalidos = computed(() => isDark.value ? paletaFria : paletaCalida)
-const coloresFrios = computed(() => isDark.value ? paletaCalida : paletaFria)
-
-function aleatorioConSemilla(semilla: number) {
-  let s = semilla
-  return () => {
-    s = (s * 1664525 + 1013904223) & 0x7fffffff
-    return s / 0x7fffffff
-  }
-}
-
-function generarDatosMusculares(
-  grupos: string[],
-  colores: string[],
-  semillaBase: number,
-  valoresBase: number[],
-  tendencia: number,
-): ChartSeries[] {
-  const ahora = new Date()
-  const inicio = new Date(ahora)
-  inicio.setDate(inicio.getDate() - 11 * 7)
-  inicio.setDate(inicio.getDate() - inicio.getDay())
-
-  return grupos.map((grupo, indice) => {
-    const aleatorio = aleatorioConSemilla(semillaBase + indice * 10)
-    const datos: { x: Date; y: number }[] = []
-    const cursor = new Date(inicio)
-    let valor = valoresBase[indice]
-    while (cursor <= ahora) {
-      valor += tendencia + (aleatorio() - 0.5) * 4
-      valor = Math.max(30, Math.min(100, valor))
-      datos.push({ x: new Date(cursor), y: Math.round(valor * 10) / 10 })
-      cursor.setDate(cursor.getDate() + 7)
-    }
-    return { label: grupo, data: datos, color: colores[indice] }
-  })
-}
-
-const seriesFuerza = computed<ChartSeries[]>(() =>
-  generarDatosMusculares(gruposFuerza, coloresCalidos.value, 42, [62, 55, 68, 48], 2.2)
-)
-
-const seriesResistencia = computed<ChartSeries[]>(() =>
-  generarDatosMusculares(gruposResistencia, coloresFrios.value, 100, [40, 35, 38, 32], 1.5)
-)
+const seriesFuerza = ref<ChartSeries[]>([])
+const seriesResistencia = ref<ChartSeries[]>([])
 
 const modoVista = ref<'diario' | 'semanal' | 'mensual'>('mensual')
 
@@ -175,8 +131,7 @@ const elementosPlanificador = computed<PlannerItem[]>(() => [
   ...rutinas.value.map(r => ({ id: r.id, name: r.nombre, icon: r.icono, type: 'routine' as const, exerciseIds: r.idsEjercicios })),
 ])
 
-function alConfirmarPlan(planificacion: Record<number, number[]>) {
-  console.log('Ejercicios planificados:', planificacion)
+function alConfirmarPlan(_planificacion: Record<number, number[]>) {
   modoPlanificacion.value = false
 }
 
@@ -201,10 +156,12 @@ function alEditarPlan(elemento: PlannerItem) {
   }
 }
 
-function alEliminarPlan(elemento: PlannerItem) {
+async function alEliminarPlan(elemento: PlannerItem) {
   if (elemento.type === 'routine') {
+    await fitnessStore.deleteRoutine(elemento.id)
     rutinas.value = rutinas.value.filter(r => r.id !== elemento.id)
   } else {
+    await fitnessStore.deleteExercise(elemento.id)
     ejercicios.value = ejercicios.value.filter(e => e.id !== elemento.id)
   }
 }
@@ -213,19 +170,20 @@ function alEliminarPlan(elemento: PlannerItem) {
 /*  Planificador de rutinas                                                   */
 /* -------------------------------------------------------------------------- */
 
-function alGuardarRutina(rutina: { name: string; exerciseIds: number[] }) {
+async function alGuardarRutina(rutinaData: { name: string; exerciseIds: number[] }) {
   if (modoRutinaPlanificador.value === 'editar' && rutinaEditando.value) {
     const r = rutinas.value.find(rt => rt.id === rutinaEditando.value!.id)
     if (r) {
-      r.nombre = rutina.name
-      r.idsEjercicios = rutina.exerciseIds
+      r.nombre = rutinaData.name
+      r.idsEjercicios = rutinaData.exerciseIds
     }
   } else {
+    const saved = await fitnessStore.createRoutine(currentUser.value!.id!, { name: rutinaData.name, description: '', isActive: true } as any)
     rutinas.value.push({
-      id: Date.now(),
-      nombre: rutina.name,
+      id: saved.id!,
+      nombre: saved.name,
       icono: themeIcons.gym.light,
-      idsEjercicios: rutina.exerciseIds,
+      idsEjercicios: rutinaData.exerciseIds,
     })
   }
   modoRutinaPlanificador.value = null
@@ -248,7 +206,7 @@ const ejerciciosDeHoy = computed<Ejercicio[]>(() => {
   const indiceHoy = (ahora.getDay() + 6) % 7
   const idsPlanificados = planificacionSemanal.value[indiceHoy]
   if (!idsPlanificados || idsPlanificados.length === 0) {
-    return ejercicios.value
+    return []
   }
   const resultado: Ejercicio[] = []
   for (const id of idsPlanificados) {
@@ -281,8 +239,6 @@ const dialogoAgregarAbierto = ref(false)
 const dialogoNombreEjercicio = ref('')
 const dialogoGrupoMuscular = ref('Pectoral')
 const dialogoTipoEjercicio = ref<'fuerza' | 'resistencia'>('fuerza')
-const dialogoCantidadSeries = ref(3)
-const dialogoRepeticionesSeries = ref<number[]>([])
 
 const gruposMusculares = ['Pectoral', 'Dorsal', 'Piernas', 'Hombros', 'Cardio', 'Core', 'Bíceps', 'Tríceps', 'Glúteos', 'Abdomen', 'Espalda', 'Gemelo']
 
@@ -290,25 +246,26 @@ function abrirDialogoAgregar() {
   dialogoNombreEjercicio.value = ''
   dialogoGrupoMuscular.value = 'Pectoral'
   dialogoTipoEjercicio.value = 'fuerza'
-  dialogoCantidadSeries.value = 3
-  dialogoRepeticionesSeries.value = [10, 10, 10]
   dialogoAgregarAbierto.value = true
 }
 
-function confirmarDialogoAgregar() {
+async function confirmarDialogoAgregar() {
   if (!dialogoNombreEjercicio.value.trim()) return
-  ejercicios.value.push({
-    id: Date.now() + Math.floor(Math.random() * 10000),
-    nombre: dialogoNombreEjercicio.value.trim(),
-    icono: themeIcons.gym.light,
-    grupoMuscular: dialogoGrupoMuscular.value,
-    tipo: dialogoTipoEjercicio.value,
-    series: dialogoRepeticionesSeries.value.slice(0, dialogoCantidadSeries.value).map(v => ({
-      repeticionesPrevistas: Math.max(1, v || 10),
-      repeticionesReales: 0,
-      confirmada: false,
-    })),
-  })
+  const saved = await fitnessStore.addExercise(
+    currentUser.value!.id!,
+    dialogoNombreEjercicio.value.trim(),
+    dialogoTipoEjercicio.value,
+    dialogoGrupoMuscular.value,
+  )
+  if (saved) {
+    ejercicios.value.push({
+      id: saved.id!,
+      nombre: saved.name,
+      icono: themeIcons.gym.light,
+      grupoMuscular: dialogoGrupoMuscular.value,
+      tipo: saved.type,
+    })
+  }
   dialogoAgregarAbierto.value = false
 }
 
@@ -316,21 +273,41 @@ function cancelarDialogoAgregar() {
   dialogoAgregarAbierto.value = false
 }
 
-function actualizarCantidadSeries(delta: number) {
-  const nuevaCantidad = Math.max(1, Math.min(10, dialogoCantidadSeries.value + delta))
-  while (dialogoRepeticionesSeries.value.length < nuevaCantidad) {
-    dialogoRepeticionesSeries.value.push(10)
-  }
-  if (dialogoRepeticionesSeries.value.length > nuevaCantidad) {
-    dialogoRepeticionesSeries.value = dialogoRepeticionesSeries.value.slice(0, nuevaCantidad)
-  }
-  dialogoCantidadSeries.value = nuevaCantidad
+/* -------------------------------------------------------------------------- */
+/*  Selector de ejercicios para Hoy                                           */
+/* -------------------------------------------------------------------------- */
+
+const dialogoAgregarHoyAbierto = ref(false)
+const ejerciciosSeleccionadosHoy = ref<number[]>([])
+
+function abrirSelectorHoy() {
+  const hoyIdx = (new Date().getDay() + 6) % 7
+  ejerciciosSeleccionadosHoy.value = [...(planificacionSemanal.value[hoyIdx] || [])]
+  dialogoAgregarHoyAbierto.value = true
 }
 
-function confirmarSerie(idEjercicio: number, indiceSerie: number): void {
-  const ejercicio = ejercicios.value.find(e => e.id === idEjercicio)
-  if (!ejercicio || !ejercicio.series[indiceSerie]) return
-  ejercicio.series[indiceSerie].confirmada = !ejercicio.series[indiceSerie].confirmada
+function toggleEjercicioHoy(id: number) {
+  const idx = ejerciciosSeleccionadosHoy.value.indexOf(id)
+  if (idx >= 0) {
+    ejerciciosSeleccionadosHoy.value.splice(idx, 1)
+  } else {
+    ejerciciosSeleccionadosHoy.value.push(id)
+  }
+}
+
+function confirmarSelectorHoy() {
+  const hoyIdx = (new Date().getDay() + 6) % 7
+  planificacionSemanal.value[hoyIdx] = [...ejerciciosSeleccionadosHoy.value]
+  dialogoAgregarHoyAbierto.value = false
+}
+
+function cancelarSelectorHoy() {
+  dialogoAgregarHoyAbierto.value = false
+}
+
+function limpiarEjerciciosHoy() {
+  const hoyIdx = (new Date().getDay() + 6) % 7
+  delete planificacionSemanal.value[hoyIdx]
 }
 
 function abrirContextoEjercicio(ejercicio: Ejercicio, evento: MouseEvent | TouchEvent) {
@@ -349,7 +326,7 @@ function abrirContextoEjercicio(ejercicio: Ejercicio, evento: MouseEvent | Touch
     {
       icon: themeIcons.delete.light,
       label: 'Eliminar',
-      action: () => { ejercicios.value = ejercicios.value.filter(e => e.id !== ejercicio.id) },
+      action: () => { fitnessStore.deleteExercise(ejercicio.id); ejercicios.value = ejercicios.value.filter(e => e.id !== ejercicio.id) },
     },
   ])
 }
@@ -359,13 +336,27 @@ function abrirContextoEjercicio(ejercicio: Ejercicio, evento: MouseEvent | Touch
 /* -------------------------------------------------------------------------- */
 
 const medicionesCorporales = ref({
-  altura: 175,
-  peso: 74.5,
-  grasaCorporal: 15.2,
-  pecho: 98,
-  cintura: 80,
-  muslo: 55,
+  altura: 0,
+  peso: 0,
+  grasaCorporal: 0,
+  pecho: 0,
+  cintura: 0,
+  muslo: 0,
 })
+
+function loadBodyMeasurements() {
+  const latest = fitnessStore.latestBodyMeasurement
+  if (latest) {
+    medicionesCorporales.value = {
+      altura: latest.height_cm || 0,
+      peso: latest.weight_kg || 0,
+      grasaCorporal: latest.body_fat_percent || 0,
+      pecho: latest.chest_cm || 0,
+      cintura: latest.waist_cm || 0,
+      muslo: latest.thigh_cm || 0,
+    }
+  }
+}
 
 const claveMedicionEditando = ref<string | null>(null)
 const valorMedicionEditando = ref('')
@@ -379,11 +370,22 @@ function iniciarEdicionMedicion(clave: string) {
   })
 }
 
-function guardarEdicionMedicion() {
+async function guardarEdicionMedicion() {
   if (!claveMedicionEditando.value) return
   const valor = parseFloat(valorMedicionEditando.value)
   if (!isNaN(valor) && valor > 0) {
     (medicionesCorporales.value as any)[claveMedicionEditando.value] = valor
+    const m = medicionesCorporales.value
+    await fitnessStore.saveBodyMeasurement({
+      user_id: currentUser.value!.id!,
+      date: new Date().toISOString().slice(0, 10),
+      weight_kg: m.peso,
+      height_cm: m.altura,
+      body_fat_percent: m.grasaCorporal,
+      chest_cm: m.pecho,
+      waist_cm: m.cintura,
+      thigh_cm: m.muslo,
+    })
   }
   claveMedicionEditando.value = null
 }
@@ -410,6 +412,12 @@ const etiquetasCorporales = computed<EtiquetaCorporal[]>(() => {
     { id: 6, clave: 'cintura', etiqueta: 'Cintura', valor: String(m.cintura), unidad: 'cm', lado: 'derecha', desplazamiento: 50 },
     { id: 7, clave: 'muslo', etiqueta: 'Muslo', valor: String(m.muslo), unidad: 'cm', lado: 'inferior', desplazamiento: 50 },
   ]
+})
+
+onMounted(async () => {
+  await fitnessStore.loadAll(currentUser.value!.id!)
+  initFromStore()
+  loadBodyMeasurements()
 })
 </script>
 
@@ -563,44 +571,23 @@ const etiquetasCorporales = computed<EtiquetaCorporal[]>(() => {
               <span class="nombre-ejercicio" :style="{ color: colorTexto }">{{ ej.nombre }}</span>
               <span class="grupo-ejercicio" :style="{ color: colorTextoSecundario }">{{ ej.grupoMuscular }}</span>
             </div>
-            <div class="series-ejercicio">
-              <div v-for="(serie, indice) in ej.series" :key="indice" class="fila-serie">
-                <span class="etiqueta-serie" :style="{ color: colorTexto }">{{ indice + 1 }}ª</span>
-                <div class="contenedor-valor">
-                  <input
-                    type="number"
-                    class="entrada-valor"
-                    :style="{ backgroundColor: colorFondoInput, color: colorTexto, borderColor: colorBorde }"
-                    :placeholder="String(serie.repeticionesPrevistas)"
-                    v-model="serie.repeticionesReales"
-                    min="0"
-                  />
-                </div>
-                <label class="envoltura-check">
-                  <input
-                    type="checkbox"
-                    :checked="serie.confirmada"
-                    @change="confirmarSerie(ej.id, indice)"
-                    class="entrada-check"
-                  />
-                  <span class="circulo-check" :class="{ confirmado: serie.confirmada }" :style="serie.confirmada ? { backgroundColor: colorPrimario, borderColor: colorPrimario } : { borderColor: colorBorde }">
-                    <svg v-if="serie.confirmada" viewBox="0 0 24 24" class="svg-check">
-                      <path d="M6 14l3 3 9-9" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                  </span>
-                </label>
-              </div>
-            </div>
+
           </div>
-          <button class="boton-agregar-ejercicio" @click="abrirDialogoAgregar">
+          <button class="boton-agregar-ejercicio" @click="abrirSelectorHoy">
             <svg class="icono-agregar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="8" x2="12" y2="16" />
               <line x1="8" y1="12" x2="16" y2="12" />
             </svg>
-            <span>Agregar ejercicio</span>
+            <span>Elegir ejercicios</span>
           </button>
-          <div v-if="ejerciciosVisibles.length === 0" class="hoy-vacio" :style="{ color: colorTextoSecundario }">Sin ejercicios</div>
+          <button v-if="ejerciciosVisibles.length > 0" class="boton-limpiar-hoy" @click="limpiarEjerciciosHoy" :style="{ color: colorTextoSecundario }">
+            Quitar todos
+          </button>
+          <div v-if="ejerciciosVisibles.length === 0" class="hoy-vacio" :style="{ color: colorTextoSecundario }">
+            <p>Sin ejercicios para hoy</p>
+            <p class="hoy-vacio-sub">Toca "Elegir ejercicios" para seleccionar de tu lista</p>
+          </div>
         </div>
       </div>
     </div>
@@ -639,36 +626,48 @@ const etiquetasCorporales = computed<EtiquetaCorporal[]>(() => {
             </div>
           </label>
 
-          <label class="campo-dialogo">
-            <span class="etiqueta-campo" :style="{ color: colorTextoSecundario }">Número de series</span>
-            <div class="incrementador">
-              <button class="boton-paso" :style="{ borderColor: colorBorde, color: colorTexto }" @click="actualizarCantidadSeries(-1)" :disabled="dialogoCantidadSeries <= 1">−</button>
-              <span class="valor-paso" :style="{ color: colorTexto }">{{ dialogoCantidadSeries }}</span>
-              <button class="boton-paso" :style="{ borderColor: colorBorde, color: colorTexto }" @click="actualizarCantidadSeries(1)" :disabled="dialogoCantidadSeries >= 10">+</button>
-            </div>
-          </label>
 
-          <div class="campo-dialogo">
-            <span class="etiqueta-campo" :style="{ color: colorTextoSecundario }">Repeticiones por serie</span>
-            <div class="lista-repeticiones">
-              <div v-for="i in dialogoCantidadSeries" :key="i" class="fila-repeticion">
-                <span class="etiqueta-repeticion" :style="{ color: colorTexto }">{{ i }}ª serie</span>
-                <input
-                  v-model.number="dialogoRepeticionesSeries[i - 1]"
-                  type="number"
-                  class="entrada-dialogo entrada-repeticion"
-                  min="1"
-                  placeholder="10"
-                  :style="{ backgroundColor: colorFondoInput, color: colorTexto, borderColor: colorBorde }"
-                />
-                <span class="unidad-repeticion" :style="{ color: colorTextoSecundario }">rep</span>
-              </div>
-            </div>
-          </div>
 
           <div class="acciones-dialogo">
             <button class="boton-dialogo cancelar" :style="{ backgroundColor: colorBorde, color: colorTexto }" @click="cancelarDialogoAgregar">Cancelar</button>
             <button class="boton-dialogo confirmar" :style="{ backgroundColor: colorPrimario, color: 'white' }" @click="confirmarDialogoAgregar" :disabled="!dialogoNombreEjercicio.trim()">Añadir</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Diálogo para elegir ejercicios de Hoy -->
+    <Teleport to="body">
+      <div v-if="dialogoAgregarHoyAbierto" class="fondo-dialogo" @click.self="cancelarSelectorHoy">
+        <div class="dialogo-agregar" :style="{ backgroundColor: colorSuperficie }">
+          <h3 class="titulo-dialogo" :style="{ color: colorTexto }">Elegir ejercicios para hoy</h3>
+          <div v-if="ejercicios.length === 0" class="hoy-vacio" :style="{ color: colorTextoSecundario }">
+            No hay ejercicios. Crea uno nuevo con el botón +.
+          </div>
+          <div v-else class="lista-selector-hoy">
+            <div
+              v-for="ej in ejercicios"
+              :key="ej.id"
+              class="item-selector-hoy"
+              :class="{ seleccionado: ejerciciosSeleccionadosHoy.includes(ej.id) }"
+              :style="{ borderColor: colorBorde, backgroundColor: colorFondoInput }"
+              @click="toggleEjercicioHoy(ej.id)"
+            >
+              <span class="check-selector" :style="ejerciciosSeleccionadosHoy.includes(ej.id) ? { backgroundColor: colorPrimario, borderColor: colorPrimario } : { borderColor: colorBorde }">
+                <svg v-if="ejerciciosSeleccionadosHoy.includes(ej.id)" viewBox="0 0 24 24" class="svg-check-selector">
+                  <path d="M6 14l3 3 9-9" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </span>
+              <span class="icono-ejercicio">{{ ej.icono }}</span>
+              <div class="info-ejercicio">
+                <span class="nombre-ejercicio" :style="{ color: colorTexto }">{{ ej.nombre }}</span>
+                <span class="grupo-ejercicio" :style="{ color: colorTextoSecundario }">{{ ej.grupoMuscular }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="acciones-dialogo">
+            <button class="boton-dialogo cancelar" :style="{ backgroundColor: colorBorde, color: colorTexto }" @click="cancelarSelectorHoy">Cancelar</button>
+            <button class="boton-dialogo confirmar" :style="{ backgroundColor: colorPrimario, color: 'white' }" @click="confirmarSelectorHoy">Aceptar</button>
           </div>
         </div>
       </div>
@@ -706,24 +705,7 @@ const etiquetasCorporales = computed<EtiquetaCorporal[]>(() => {
                 <button :class="{ activo: ej.tipo === 'resistencia' }" :style="ej.tipo === 'resistencia' ? { backgroundColor: colorPrimario, color: 'white', borderColor: colorPrimario } : { backgroundColor: colorFondoInput, color: colorTextoSecundario, borderColor: colorBorde }" @click="ej.tipo = 'resistencia'">Resistencia</button>
               </div>
             </label>
-            <div class="campo-dialogo">
-              <span class="etiqueta-campo" :style="{ color: colorTextoSecundario }">Series</span>
-              <div class="series-editar">
-                <div v-for="(serie, indice) in ej.series" :key="indice" class="fila-editar-serie">
-                  <span class="etiqueta-repeticion" :style="{ color: colorTexto }">{{ indice + 1 }}ª</span>
-                  <label class="campo-editar-serie">
-                    <span :style="{ color: colorTextoSecundario }">Prev.</span>
-                    <input v-model.number="serie.repeticionesPrevistas" type="number" class="entrada-dialogo entrada-repeticion" min="1" :style="{ backgroundColor: colorFondoInput, color: colorTexto, borderColor: colorBorde }" />
-                  </label>
-                  <label class="campo-editar-serie">
-                    <span :style="{ color: colorTextoSecundario }">Real</span>
-                    <input v-model.number="serie.repeticionesReales" type="number" class="entrada-dialogo entrada-repeticion" min="0" :style="{ backgroundColor: colorFondoInput, color: colorTexto, borderColor: colorBorde }" />
-                  </label>
-                  <button class="boton-eliminar-serie" :style="{ color: colorTextoSecundario }" @click="ej.series.splice(indice, 1)" title="Eliminar serie">&times;</button>
-                </div>
-              </div>
-              <button class="boton-agregar-serie" :style="{ color: colorTextoSecundario, borderColor: colorBorde }" @click="ej.series.push({ repeticionesPrevistas: 10, repeticionesReales: 0, confirmada: false })">+ Añadir serie</button>
-            </div>
+
           </div>
         </div>
       </template>
@@ -1076,6 +1058,65 @@ const etiquetasCorporales = computed<EtiquetaCorporal[]>(() => {
   text-align: center;
   padding: 20px 0;
   font-size: 13px;
+}
+
+.hoy-vacio-sub {
+  font-size: 11px;
+  margin-top: 4px;
+  opacity: 0.7;
+}
+
+.boton-limpiar-hoy {
+  background: transparent;
+  border: none;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-family: inherit;
+  text-align: center;
+}
+
+.lista-selector-hoy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.item-selector-hoy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.item-selector-hoy.seleccionado {
+  border-color: var(--color-primary);
+  opacity: 1;
+}
+
+.check-selector {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.svg-check-selector {
+  width: 14px;
+  height: 14px;
 }
 
 /* Diálogo para agregar ejercicio */

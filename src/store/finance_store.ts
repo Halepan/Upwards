@@ -14,8 +14,6 @@ import {
 } from '../service/finance_service'
 import { BaseStore } from './base_store'
 
-/* Store reactiva de finanzas. Gestiona cuentas, ingresos, gastos y reglas automáticas.
-   Expone balances, filtros por fecha y operaciones de flujo de efectivo. */
 export class FinanceStore extends BaseStore<Account> {
   protected repository: AccountRepository
   private service: FinanceService
@@ -40,7 +38,13 @@ export class FinanceStore extends BaseStore<Account> {
     this.spendableBalance = ref(0)
   }
 
-  /* Agrega un ingreso, aplica reglas automáticas y refresca el estado. */
+  async loadAll(userId: number): Promise<void> {
+    await Promise.all([
+      this.fetchAll(),
+      this.loadTransactions(userId),
+    ])
+  }
+
   async addIncome(userId: number, data: IncomeDTO): Promise<IncomeEntry> {
     const entry = await this.service.addIncome(userId, data)
     this.incomes.value.push(entry)
@@ -48,7 +52,6 @@ export class FinanceStore extends BaseStore<Account> {
     return entry
   }
 
-  /* Agrega un gasto, descuenta de la cuenta y refresca el estado. */
   async addExpense(accountId: number, data: ExpenseDTO): Promise<ExpenseEntry> {
     const entry = await this.service.addExpense(accountId, data)
     this.expenses.value.push(entry)
@@ -56,13 +59,11 @@ export class FinanceStore extends BaseStore<Account> {
     return entry
   }
 
-  /* Calcula el balance disponible (cuentas tipo 'spendable'). */
   async refreshBalance(userId: number): Promise<void> {
     this.spendableBalance.value = await this.service.calculateSpendableBalance(userId)
     await this.fetchAll()
   }
 
-  /* Carga los ingresos y gastos de un usuario. */
   async loadTransactions(userId: number): Promise<void> {
     const [incomes, expenses] = await Promise.all([
       this.incomeRepo.findByUserId(userId),
@@ -72,7 +73,10 @@ export class FinanceStore extends BaseStore<Account> {
     this.expenses.value = expenses
   }
 
-  /* Refresca todo el estado financiero de una cuenta. */
+  async deleteAccount(id: number): Promise<void> {
+    await this.deleteById(id)
+  }
+
   private async refreshAll(accountId: number): Promise<void> {
     const account = this.getById(accountId)
     if (account) {

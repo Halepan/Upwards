@@ -3,6 +3,8 @@ import { ref, computed } from 'vue'
 import { useTheme } from '../composables/useTheme'
 import { useLanguage } from '../composables/useLanguage'
 import { themeIcons, themeColors } from '../config/theme.config'
+import ProfilePanel from './ProfilePanel.vue'
+import SettingsPanel from './SettingsPanel.vue'
 
 export type Section = 'finanzas' | 'habitos' | 'fitness'
 
@@ -30,6 +32,8 @@ const textSecondaryColor = computed(() => currentColors.value.textSecondary)
 const borderColor = computed(() => currentColors.value.border)
 
 const menuOpen = ref(false)
+const profileOpen = ref(false)
+const settingsOpen = ref(false)
 
 const sectionTitle: Record<Section, string> = {
   finanzas: 'Finanzas',
@@ -121,14 +125,14 @@ function closeMenu(): void {
               <div class="menu-body">
                 <button
                   class="menu-item"
-                  @click="closeMenu"
+                  @click="closeMenu(); profileOpen = true"
                   :style="{ color: textColor }"
                 >
                   Perfil
                 </button>
                 <button
                   class="menu-item"
-                  @click="closeMenu"
+                  @click="closeMenu(); settingsOpen = true"
                   :style="{ color: textColor }"
                 >
                   Configuración
@@ -160,6 +164,9 @@ function closeMenu(): void {
     <main class="shell-content" @click="closeMenu">
       <slot />
     </main>
+
+    <ProfilePanel :open="profileOpen" @close="profileOpen = false" />
+    <SettingsPanel :open="settingsOpen" @close="settingsOpen = false" />
 
     <nav
       class="bottom-nav"

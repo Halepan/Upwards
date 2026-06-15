@@ -9,6 +9,12 @@ import WeekPlanner from './WeekPlanner.vue'
 import type { FabAction } from './FloatingActionButton.vue'
 import type { PlannerItem } from './WeekPlanner.vue'
 import { themeIcons } from '../config/theme.config'
+import { habitStore, useAuthStore } from '../store'
+import { storeToRefs } from 'pinia'
+
+const auth = useAuthStore()
+const { currentUser } = storeToRefs(auth)
+import type { Habit } from '../domain/habit'
 
 const { isDark } = useTheme()
 
@@ -17,7 +23,7 @@ interface HabitLog {
   done: boolean
 }
 
-interface Habit {
+interface HabitLocal {
   id: number
   name: string
   icon: string
@@ -25,51 +31,21 @@ interface Habit {
   logs: HabitLog[]
 }
 
-// Datos históricos desde 2025 (mejor rendimiento)
-const DATA_START = new Date(2025, 0, 1)      // 1 de enero de 2025
 const today = new Date()
 const todayStr = today.toISOString().slice(0, 10)
+const DATA_START = new Date(2025, 0, 1)
 
-function seededRand(seed: number) {
-  let s = seed
-  return () => {
-    s = (s * 1664525 + 1013904223) & 0x7fffffff
-    return s / 0x7fffffff
-  }
-}
-
-function generateLogs(seed: number, rate: number, startDate: Date = DATA_START, endDate: Date = today): HabitLog[] {
-  const rand = seededRand(seed)
-  const logs: HabitLog[] = []
-  const cur = new Date(startDate)
-  while (cur <= endDate) {
-    const date = cur.toISOString().slice(0, 10)
-    logs.push({ date, done: rand() < rate })
-    cur.setDate(cur.getDate() + 1)
-  }
-  return logs
-}
-
-// Hábitos con logs desde 2025 hasta hoy
-const habits = ref<Habit[]>([
-  { id: 1, name: 'Leer 30 min', icon: '📖', frequencyGoal: 5, logs: generateLogs(42, 0.65) },
-  { id: 2, name: 'Meditar', icon: '🧘', frequencyGoal: 7, logs: generateLogs(123, 0.75) },
-  { id: 3, name: 'Agua 2L', icon: '💧', frequencyGoal: 7, logs: generateLogs(777, 0.9) },
-  { id: 4, name: 'Ejercicio', icon: '🏋️', frequencyGoal: 4, logs: generateLogs(456, 0.5) },
-  { id: 5, name: 'Escribir', icon: '✍️', frequencyGoal: 3, logs: generateLogs(789, 0.4) },
-  { id: 6, name: 'Inglés 20 min', icon: '🌎', frequencyGoal: 5, logs: generateLogs(234, 0.6) },
-  { id: 7, name: 'Sin azúcar', icon: '🚫', frequencyGoal: 7, logs: generateLogs(567, 0.8) },
-  { id: 8, name: 'Estiramientos', icon: '🤸', frequencyGoal: 6, logs: generateLogs(890, 0.55) },
-  { id: 9, name: 'Dormir 8h', icon: '😴', frequencyGoal: 7, logs: generateLogs(111, 0.85) },
-  { id: 10, name: 'Caminar 10k', icon: '🚶', frequencyGoal: 5, logs: generateLogs(222, 0.45) },
-  { id: 11, name: 'Desayunar fruta', icon: '🍎', frequencyGoal: 7, logs: generateLogs(333, 0.7) },
-  { id: 12, name: 'No fumar', icon: '🚭', frequencyGoal: 7, logs: generateLogs(444, 0.9) },
-  { id: 13, name: 'No fumar', icon: '🚭', frequencyGoal: 7, logs: generateLogs(444, 0.9) },
-  { id: 14, name: 'No fumar', icon: '🚭', frequencyGoal: 7, logs: generateLogs(444, 0.9) },
-  { id: 15, name: 'No fumar', icon: '🚭', frequencyGoal: 7, logs: generateLogs(444, 0.9) },
-  { id: 16, name: 'No fumar', icon: '🚭', frequencyGoal: 7, logs: generateLogs(444, 0.9) },
-  { id: 17, name: 'No fumar', icon: '🚭', frequencyGoal: 7, logs: generateLogs(444, 0.9) },
-])
+const habits = computed<HabitLocal[]>(() =>
+  habitStore.items.map((h: Habit) => ({
+    id: h.id!,
+    name: h.name,
+    icon: h.icon,
+    frequencyGoal: h.frequencyGoal,
+    logs: habitStore.allLogs.value
+      .filter((l: any) => l.habitId === h.id)
+      .map((l: any) => ({ date: l.date, done: l.status === 'completed' })),
+  }))
+)
 
 const todayHabits = computed(() =>
   habits.value.map(h => {
@@ -95,7 +71,7 @@ interface RoadmapCol {
   top: string
   mid: string
   bot: string
-  score: (h: Habit) => number
+  score: (h: HabitLocal) => number
   monthYear: string
 }
 
@@ -125,7 +101,7 @@ const roadmapColumns = computed<RoadmapCol[]>(() => {
         mid: '',
         bot: String(d.getDate()),
         monthYear: `${monthNames[d.getMonth()]} ${d.getFullYear()}`,
-        score: (h: Habit) => {
+        score: (h: HabitLocal) => {
           const log = h.logs.find(l => l.date === fmt(d))
           return log?.done ? 1 : 0
         },
@@ -133,9 +109,8 @@ const roadmapColumns = computed<RoadmapCol[]>(() => {
       cur.setDate(cur.getDate() + 1)
     }
   } else if (viewMode.value === 'semanal') {
-    // 26 weeks (~6 months)
     const cur = new Date(start)
-    cur.setDate(cur.getDate() - cur.getDay() + 1) // Monday of first week
+    cur.setDate(cur.getDate() - cur.getDay() + 1)
     const maxWeeks = 26
     let weekCount = 0
     while (weekCount < maxWeeks && cur <= today) {
@@ -147,7 +122,7 @@ const roadmapColumns = computed<RoadmapCol[]>(() => {
         mid: '',
         bot: `${mon.getDate()}/${mon.getMonth() + 1}`,
         monthYear: `${monthNames[mon.getMonth()]} ${mon.getFullYear()}`,
-        score: (h: Habit) => {
+        score: (h: HabitLocal) => {
           let done = 0, total = 0
           const d = new Date(mon)
           const sun = new Date(d); sun.setDate(d.getDate() + 6)
@@ -162,7 +137,7 @@ const roadmapColumns = computed<RoadmapCol[]>(() => {
       cur.setDate(cur.getDate() + 7)
       weekCount++
     }
-  } else { // mensual – 24 months (2 years)
+  } else {
     const end = new Date(start.getFullYear() + 2, start.getMonth(), 1)
     const cur = new Date(start)
     while (cur < end && cur <= today) {
@@ -175,7 +150,7 @@ const roadmapColumns = computed<RoadmapCol[]>(() => {
         mid: '',
         bot: monthNames[mm],
         monthYear: `${monthNames[mm]} ${y}`,
-        score: (h: Habit) => {
+        score: (h: HabitLocal) => {
           let done = 0, total = 0
           for (const log of h.logs) {
             const [ly, lm] = log.date.split('-').map(Number)
@@ -208,7 +183,7 @@ const {
 
 const editPanel = ref(false)
 const panelTitle = ref('')
-const editingHabit = ref<Habit | null>(null)
+const editingHabit = ref<HabitLocal | null>(null)
 
 // Habit form state
 const formName = ref('')
@@ -217,7 +192,7 @@ const formFrequencyGoal = ref(7)
 
 const habitIcons = ['📖', '🧘', '💧', '🏋️', '✍️', '🌎', '🚫', '🤸', '😴', '🚶', '🍎', '🚭', '🎯', '🎨', '🎵', '📝', '☕', '🧠', '💪', '🧹']
 
-function openEdit(habit?: Habit): void {
+function openEdit(habit?: HabitLocal): void {
   if (habit) {
     editingHabit.value = habit
     formName.value = habit.name
@@ -234,30 +209,35 @@ function openEdit(habit?: Habit): void {
   editPanel.value = true
 }
 
-function saveHabit() {
+async function saveHabit() {
   if (!formName.value.trim()) return
   if (editingHabit.value) {
-    editingHabit.value.name = formName.value.trim()
-    editingHabit.value.icon = formIcon.value
-    editingHabit.value.frequencyGoal = formFrequencyGoal.value
+    const updated = habitStore.getById(editingHabit.value.id)
+    if (updated) {
+      updated.name = formName.value.trim()
+      updated.icon = formIcon.value
+      updated.frequencyGoal = formFrequencyGoal.value
+      await habitStore.save(updated)
+    }
   } else {
-    habits.value.push({
-      id: Date.now() + Math.floor(Math.random() * 10000),
+    await habitStore.createHabit({
+      userId: currentUser.value!.id!,
       name: formName.value.trim(),
+      description: '',
       icon: formIcon.value,
+      color: '#7CB342',
       frequencyGoal: formFrequencyGoal.value,
-      logs: [],
     })
   }
   editPanel.value = false
   editingHabit.value = null
 }
 
-function deleteHabit(habit: Habit): void {
-  habits.value = habits.value.filter(h => h.id !== habit.id)
+function deleteHabit(habit: HabitLocal): void {
+  habitStore.deleteHabit(habit.id)
 }
 
-function onLongPressHabit(habit: Habit, event: MouseEvent | TouchEvent): void {
+function onLongPressHabit(habit: HabitLocal, event: MouseEvent | TouchEvent): void {
   startPress(event, [
     { icon: isDark.value ? themeIcons.check.dark : themeIcons.check.light, label: 'Editar', action: () => openEdit(habit) },
     { icon: isDark.value ? themeIcons.delete.dark : themeIcons.delete.light, label: 'Eliminar', action: () => deleteHabit(habit) },
@@ -283,23 +263,16 @@ function onPlanCancel() {
 }
 
 function onPlanEdit(item: PlannerItem) {
-  const habit = habits.value.find(h => h.id === item.id)
-  if (habit) openEdit(habit)
+  const h = habits.value.find(h => h.id === item.id)
+  if (h) openEdit(h)
 }
 
 function onPlanDelete(item: PlannerItem) {
-  habits.value = habits.value.filter(h => h.id !== item.id)
+  habitStore.deleteHabit(item.id)
 }
 
 function toggleToday(habitId: number): void {
-  const h = habits.value.find(h => h.id === habitId)
-  if (!h) return
-  const log = h.logs.find(l => l.date === todayStr)
-  if (log) {
-    log.done = !log.done
-  } else {
-    h.logs.push({ date: todayStr, done: true })
-  }
+  habitStore.toggleDay(habitId, todayStr)
 }
 
 // Roadmap: block navigation with size per viewMode
@@ -385,6 +358,7 @@ function jumpToCurrent() {
 }
 
 onMounted(async () => {
+  await habitStore.loadAll()
   jumpToCurrent()
   await nextTick()
 })
