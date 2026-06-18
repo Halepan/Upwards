@@ -32,6 +32,7 @@ describe('FinanceService', () => {
 
   it('adds an income entry', async () => {
     const income = await service.addIncome(1, {
+      userId: 1,
       amount: 2000,
       classification: 'timeswap',
       note: 'Nómina',
@@ -66,7 +67,7 @@ describe('FinanceService', () => {
   it('adds expense throws when account not found', async () => {
     mockAccountRepo.findById = vi.fn().mockResolvedValue(undefined)
     await expect(
-      service.addExpense(999, { amount: 100, category: 'Test', note: '', date: '2024-01-01' })
+      service.addExpense(999, { accountId: 999, amount: 100, category: 'Test', note: '', date: '2024-01-01' })
     ).rejects.toThrow('Cuenta no encontrada')
   })
 })

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, beforeAll } from 'vitest'
 import { FitnessStore } from '../../store/fitness_store'
 
 describe('FitnessStore', () => {
@@ -18,7 +18,7 @@ describe('FitnessStore', () => {
   })
 
   it('adds an exercise and returns it', async () => {
-    const exercise = await store.addExercise('Press banca', 'fuerza', 'Pectoral')
+    const exercise = await store.addExercise(1, 'Press banca', 'fuerza', 'Pectoral')
     expect(exercise).toBeDefined()
     expect(exercise.name).toBe('Press banca')
     expect(exercise.type).toBe('fuerza')
@@ -31,7 +31,7 @@ describe('FitnessStore', () => {
   })
 
   it('deletes an exercise', async () => {
-    const exercise = await store.addExercise('Remo', 'resistencia', 'Dorsal')
+    const exercise = await store.addExercise(1, 'Remo', 'resistencia', 'Dorsal')
     const id = exercise.id!
     await store.deleteExercise(id)
     const found = store.items.find((e: any) => e.id === id)

@@ -13,7 +13,8 @@ describe('Account', () => {
       type: 'spendable' as const,
       balance: 0,
     }
-    return new Account(...Object.values({ ...defaults, ...overrides }))
+    const data = { ...defaults, ...overrides }
+    return new Account(data.id, data.uuid, data.createdAt, data.updatedAt, data.userId, data.name, data.type, data.balance)
   }
 
   it('creates account with zero balance', () => {

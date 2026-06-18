@@ -15,7 +15,8 @@ describe('Exercise', () => {
       description: undefined,
       isCustom: true,
     }
-    return new Exercise(...Object.values({ ...defaults, ...overrides }))
+    const data = { ...defaults, ...overrides }
+    return new Exercise(data.id, data.uuid, data.createdAt, data.updatedAt, data.userId, data.name, data.type, data.subType, data.description, data.isCustom)
   }
 
   it('creates an exercise with required fields', () => {

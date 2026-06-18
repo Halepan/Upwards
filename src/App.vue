@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from './store/auth_store'
+import { SyncEngine } from './sync'
 import AuthView from './components/AuthView.vue'
 import AppShell from './components/AppShell.vue'
 import FinancePage from './components/FinancePage.vue'
@@ -11,6 +12,45 @@ import type { Section } from './components/AppShell.vue'
 const auth = useAuthStore()
 const currentSection = ref<Section>('finanzas')
 const historyPanelOpen = ref(false)
+
+let syncEngine: SyncEngine | null = null
+let syncInterval: ReturnType<typeof setInterval> | null = null
+
+function startSync() {
+  if (!auth.currentUser?.id) return
+  syncEngine = new SyncEngine(auth.currentUser.id)
+  syncEngine.processQueue()
+  if (navigator.onLine) {
+    syncEngine.pullRemoteChanges()
+  }
+  syncInterval = setInterval(() => {
+    if (navigator.onLine && syncEngine) {
+      syncEngine.processQueue()
+      syncEngine.pullRemoteChanges()
+    }
+  }, 30000)
+}
+
+function onOnline() {
+  if (syncEngine) {
+    syncEngine.processQueue()
+    syncEngine.pullRemoteChanges()
+  }
+}
+
+watch(() => auth.isAuthenticated, (val) => {
+  if (val) startSync()
+})
+
+onMounted(() => {
+  window.addEventListener('online', onOnline)
+  if (auth.isAuthenticated) startSync()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('online', onOnline)
+  if (syncInterval) clearInterval(syncInterval)
+})
 </script>
 
 <template>

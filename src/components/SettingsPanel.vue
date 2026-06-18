@@ -4,6 +4,15 @@ import { useTheme } from '../composables/useTheme'
 import { useLanguage, type SupportedLang } from '../composables/useLanguage'
 import { themeColors } from '../config/theme.config'
 import SlidePanel from './SlidePanel.vue'
+import { useAuthStore } from '../store/auth_store'
+import { storeToRefs } from 'pinia'
+import { db } from '../lib/db'
+import { supabase } from '../lib/supabase'
+import { UserRepository } from '../repository/user_repository'
+
+const auth = useAuthStore()
+const { currentUser } = storeToRefs(auth)
+const userRepo = new UserRepository(db.users)
 
 defineProps<{
   open: boolean
@@ -38,7 +47,15 @@ function confirmDelete() {
   showDeleteConfirm.value = true
 }
 
-function executeDelete() {
+async function executeDelete() {
+  if (!currentUser.value) return
+  const userId = currentUser.value.id
+  if (navigator.onLine) {
+    const { error } = await supabase.auth.admin.deleteUser(currentUser.value.email || '')
+    if (error) console.warn('[Settings] Failed to delete remote user:', error.message)
+  }
+  await userRepo.delete(userId!)
+  auth.logout()
   showDeleteConfirm.value = false
 }
 

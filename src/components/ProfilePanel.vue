@@ -3,6 +3,15 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useTheme } from '../composables/useTheme'
 import { themeColors } from '../config/theme.config'
 import SlidePanel from './SlidePanel.vue'
+import { useAuthStore } from '../store/auth_store'
+import { storeToRefs } from 'pinia'
+import { db } from '../lib/db'
+import { supabase } from '../lib/supabase'
+import { UserRepository } from '../repository/user_repository'
+
+const auth = useAuthStore()
+const { currentUser } = storeToRefs(auth)
+const userRepo = new UserRepository(db.users)
 
 defineProps<{
   open: boolean
@@ -38,9 +47,37 @@ const email = ref('')
 const newPassword = ref('')
 const confirmPassword = ref('')
 
-function saveUsername() {}
-function saveEmail() {}
-function savePassword() {}
+async function saveUsername() {
+  if (!username.value.trim() || !currentUser.value) return
+  const user = currentUser.value
+  user.name = username.value.trim()
+  await userRepo.save(user)
+  username.value = ''
+}
+
+async function saveEmail() {
+  if (!email.value.trim() || !currentUser.value) return
+  const user = currentUser.value
+  user.email = email.value.trim()
+  await userRepo.save(user)
+  if (navigator.onLine) {
+    const { error } = await supabase.auth.updateUser({ email: email.value.trim() })
+    if (error) console.warn('[Profile] Failed to update email on Supabase:', error.message)
+  }
+  email.value = ''
+}
+
+async function savePassword() {
+  if (!newPassword.value.trim() || newPassword.value !== confirmPassword.value || !currentUser.value) return
+  if (!navigator.onLine) return
+  const { error } = await supabase.auth.updateUser({ password: newPassword.value.trim() })
+  if (error) {
+    console.warn('[Profile] Failed to update password:', error.message)
+    return
+  }
+  newPassword.value = ''
+  confirmPassword.value = ''
+}
 
 const showDeleteConfirm = ref(false)
 
@@ -48,7 +85,15 @@ function confirmDelete() {
   showDeleteConfirm.value = true
 }
 
-function executeDelete() {
+async function executeDelete() {
+  if (!currentUser.value) return
+  const userId = currentUser.value.id
+  if (navigator.onLine) {
+    const { error } = await supabase.auth.admin.deleteUser(currentUser.value.email || '')
+    if (error) console.warn('[Profile] Failed to delete remote user:', error.message)
+  }
+  await userRepo.delete(userId!)
+  auth.logout()
   showDeleteConfirm.value = false
 }
 

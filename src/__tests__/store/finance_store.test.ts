@@ -41,6 +41,7 @@ describe('FinanceStore', () => {
 
   it('adds an income entry', async () => {
     const income = await store.addIncome(1, {
+      userId: 1,
       amount: 2000,
       classification: 'timeswap',
       note: 'Nómina',

@@ -4,11 +4,11 @@ import { BaseStore } from '../../store/base_store'
 class TestStore extends BaseStore<{ id?: number; uuid: string; name: string }> {
   protected repository = {
     findAll: async () => [{ id: 1, uuid: 'a', name: 'test' }],
-    findById: async (id: number) => ({ id, uuid: 'a', name: 'test' }),
+    findById: async (_id: number) => ({ _id, uuid: 'a', name: 'test' }),
     save: async (item: any) => ({ ...item, id: item.id || 1 }),
-    delete: async (id: number) => {},
+    delete: async (_id: number) => {},
     findPendingSync: async () => [],
-    markAsSynced: async (id: number) => {},
+    markAsSynced: async (_id: number) => {},
     findByUuid: async (uuid: string) => ({ id: 1, uuid, name: 'test' }),
   } as any
 
@@ -55,7 +55,7 @@ describe('BaseStore', () => {
 
   it('save adds new item to list', async () => {
     const store = new TestStore()
-    const saved = await store.save({ uuid: 'new-uuid', name: 'new item' } as any)
+    await store.save({ uuid: 'new-uuid', name: 'new item' } as any)
     expect(store.items.some(i => i.uuid === 'new-uuid')).toBe(true)
   })
 

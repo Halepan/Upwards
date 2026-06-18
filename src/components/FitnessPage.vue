@@ -131,7 +131,8 @@ const elementosPlanificador = computed<PlannerItem[]>(() => [
   ...rutinas.value.map(r => ({ id: r.id, name: r.nombre, icon: r.icono, type: 'routine' as const, exerciseIds: r.idsEjercicios })),
 ])
 
-function alConfirmarPlan(_planificacion: Record<number, number[]>) {
+function alConfirmarPlan(planificacion: Record<number, number[]>) {
+  planificacionSemanal.value = planificacion
   modoPlanificacion.value = false
 }
 

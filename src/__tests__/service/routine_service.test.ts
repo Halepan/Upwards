@@ -32,7 +32,7 @@ describe('RoutineService', () => {
   })
 
   it('creates a routine', async () => {
-    const routine = await service.createRoutine(1, { name: 'Push', description: 'Empuje' })
+    const routine = await service.createRoutine(1, { userId: 1, name: 'Push', description: 'Empuje' })
     expect(routine).toBeDefined()
     expect(routine.name).toBe('Push')
     expect(mockRoutineRepo.save).toHaveBeenCalledOnce()

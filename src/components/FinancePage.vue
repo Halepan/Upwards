@@ -17,6 +17,8 @@ import alertIcon from '../assets/icons/weui--delete-filled.svg'
 import checkIcon from '../assets/icons/mdi--check-bold.svg'
 import { financeStore, useAuthStore } from '../store'
 import { storeToRefs } from 'pinia'
+import { db } from '../lib/db'
+import { v4 as uuidv4 } from 'uuid'
 
 const auth = useAuthStore()
 const { currentUser } = storeToRefs(auth)
@@ -66,11 +68,8 @@ function initAccounts() {
 
 const budgetAlert = computed(() => {
   for (const acct of accounts.value) {
-    if (acct.spent <= 0) continue
-    const pct = Math.round((acct.spent / acct.balance) * 100)
-    if (pct >= 80) {
-      if (pct >= 100) return { message: `¡${acct.name} ha excedido su presupuesto!`, urgent: true }
-      return { message: `Has usado el ${pct}% del presupuesto de ${acct.name}`, urgent: false }
+    if (acct.spent > 0 && acct.balance < 0) {
+      return { message: `¡${acct.name} tiene saldo negativo!`, urgent: true }
     }
   }
   return null
@@ -242,9 +241,11 @@ function openAccountForm(acct?: AccountCard) {
 
 async function saveAccount() {
   if (!acctFormName.value.trim()) return
+  if (!currentUser.value) return
   const derivations: Derivation[] = acctFormAdvanced.value
     ? acctFormDerivations.value.filter(d => d.pct > 0).map(d => ({ sourceAccountId: d.accountId, percentage: d.pct }))
     : []
+  let accountId: number
   if (editingAccount.value) {
     const a = editingAccount.value
     a.name = acctFormName.value.trim()
@@ -257,14 +258,16 @@ async function saveAccount() {
       ;(stored as any).balance = a.balance
       await financeStore.save(stored as any)
     }
+    accountId = a.id
   } else {
     const saved = await financeStore.save({
       name: acctFormName.value.trim(),
       balance: acctFormBalance.value,
       type: 'spendable',
     } as any)
+    accountId = saved.id!
     accounts.value.push({
-      id: saved.id!,
+      id: accountId,
       name: saved.name,
       balance: (saved as any).balance,
       prevBalance: (saved as any).balance,
@@ -273,6 +276,19 @@ async function saveAccount() {
       trend: 'flat',
       derivations,
     })
+  }
+  const now = new Date().toISOString()
+  if (derivations.length > 0) {
+    const existingRules = await db.auto_percent_rules.where('target_account_id').equals(accountId).toArray()
+    for (const rule of existingRules) {
+      await db.auto_percent_rules.delete(rule.id!)
+    }
+    for (const d of derivations) {
+      await db.auto_percent_rules.put({
+        uuid: uuidv4(), created_at: now, updated_at: now, sync_status: 'pending',
+        target_account_id: accountId, percentage: d.percentage, is_active: true,
+      })
+    }
   }
   editPanel.value = false
   editingAccount.value = null
@@ -357,6 +373,7 @@ async function saveTransaction() {
     const expenseAccount = accounts.value.find(a => a.name === txAccount.value)
     if (!expenseAccount) return
     expenseAccount.balance -= txAmount.value
+    expenseAccount.spent += txAmount.value
     await financeStore.addExpense(expenseAccount.id, { amount: txAmount.value, category: txCategory.value, note: txConcept.value.trim(), date: txDate.value, accountId: expenseAccount.id } as any)
     history.value.push({
       id: Date.now() + Math.floor(Math.random() * 10000),

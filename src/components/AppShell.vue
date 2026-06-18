@@ -255,7 +255,7 @@ function closeMenu(): void {
 }
 
 .history-btn-dark {
-  background: #FFD700;
+  background: var(--color-primary, #FFD700);
   border-radius: 50%;
   width: 30px;
   height: 30px;

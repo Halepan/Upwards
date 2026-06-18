@@ -11,7 +11,7 @@ import type { PlannerItem } from './WeekPlanner.vue'
 import { themeIcons } from '../config/theme.config'
 import { habitStore, useAuthStore } from '../store'
 import { storeToRefs } from 'pinia'
-
+import {clearAllData} from '../boom'
 const auth = useAuthStore()
 const { currentUser } = storeToRefs(auth)
 import type { Habit } from '../domain/habit'
@@ -48,14 +48,17 @@ const habits = computed<HabitLocal[]>(() =>
 )
 
 const todayHabits = computed(() =>
-  habits.value.map(h => {
-    const log = h.logs.find(l => l.date === todayStr)
-    return { id: h.id, name: h.name, icon: h.icon, done: log?.done ?? false }
-  })
+  habits.value
+    .filter(h => habitStore.plannedForToday.value.includes(h.id))
+    .map(h => {
+      const log = h.logs.find(l => l.date === todayStr)
+      return { id: h.id, name: h.name, icon: h.icon, done: log?.done ?? false }
+    })
 )
 
 const completedToday = computed(() => todayHabits.value.filter(h => h.done).length)
-const weeklyGoal = computed(() => habits.value.reduce((s, h) => s + h.frequencyGoal, 0))
+const plannedToday = computed(() => todayHabits.value.length)
+const weeklyGoal = computed(() => plannedToday.value)
 const donutRatio = computed(() =>
   weeklyGoal.value > 0 ? completedToday.value / weeklyGoal.value : 0
 )
@@ -82,6 +85,7 @@ function weekNum(d: Date): number {
 }
 
 function fmt(d: Date): string {
+  console.log('🗑️ Base de datos IndexedDB eliminada por completo')
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
@@ -228,6 +232,7 @@ async function saveHabit() {
       color: '#7CB342',
       frequencyGoal: formFrequencyGoal.value,
     })
+    
   }
   editPanel.value = false
   editingHabit.value = null
@@ -235,6 +240,7 @@ async function saveHabit() {
 
 function deleteHabit(habit: HabitLocal): void {
   habitStore.deleteHabit(habit.id)
+  clearAllData()
 }
 
 function onLongPressHabit(habit: HabitLocal, event: MouseEvent | TouchEvent): void {
@@ -253,8 +259,8 @@ const fabActions = computed<FabAction[]>(() => [
   { icon: isDark.value ? themeIcons.check.dark : themeIcons.check.light, label: 'Editar semana planificada', action: () => { planningTitle.value = 'Editar semana planificada'; planningMode.value = true } },
 ])
 
-function onPlanConfirm(assignments: Record<number, number[]>) {
-  console.log('Habits planned:', assignments)
+async function onPlanConfirm(assignments: Record<number, number[]>) {
+  await habitStore.saveWeekPlan(assignments)
   planningMode.value = false
 }
 
@@ -359,6 +365,7 @@ function jumpToCurrent() {
 
 onMounted(async () => {
   await habitStore.loadAll()
+  await habitStore.loadWeekPlans()
   jumpToCurrent()
   await nextTick()
 })
@@ -398,7 +405,7 @@ watch(viewMode, async () => {
           </svg>
           <span class="donut-text">
             <span class="donut-completed">{{ completedToday }}</span>
-            <span class="donut-total">/{{ weeklyGoal }}</span>
+            <span class="donut-total">/{{ plannedToday }}</span>
           </span>
         </div>
       </div>
