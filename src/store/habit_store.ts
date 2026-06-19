@@ -106,10 +106,12 @@ export class HabitStore extends BaseStore<Habit> {
   }
 
   async saveWeekPlan(assignments: Record<number, number[]>): Promise<void> {
+    console.log("saveWeekplan")
     const weekStart = this.getWeekStart()
     this.currentWeekStart.value = weekStart
     let week = await this.weekRepo.findByStartDate(weekStart)
     if (!week) {
+      console.log("la semana no existe")
       const now = new Date().toISOString()
       const endDate = this.getWeekEnd()
       week = await this.weekRepo.save(new Week(
@@ -129,28 +131,39 @@ export class HabitStore extends BaseStore<Habit> {
         undefined, uuidv4(), now, now,
         habitId, week.id!, days
       )
+      console.log(days,habitId)
       await this.weekPlanRepo.save(plan)
     }
-    await this.loadWeekPlans()
+    console.log("guardada la semana con exito")
+    this.loadWeekPlans()
   }
 
   async loadWeekPlans(): Promise<void> {
+    console.log("se esta cargando la semana")
     const weekStart = this.getWeekStart()
     const today = new Date()
-    const dayIndex = (today.getDay() + 6) % 7
+    const dayIndex = ((today.getDay() + 6) % 7)
     this.currentWeekStart.value = weekStart
     const week = await this.weekRepo.findByStartDate(weekStart)
     if (!week) {
+      console.log("la semana no existe")
       this.plannedForToday.value = []
       return
     }
-    const plans = await this.weekPlanRepo.findAllByWeek(week.id!)
+    console.log("la semana ",week.id," se cargo correctamante")
+    const lhabits = await this.weekPlanRepo.findByHabitAndWeek(dayIndex, week.id!)
     const ids: number[] = []
-    for (const plan of plans) {
-      if (plan.plannedDays.includes(dayIndex)) {
-        ids.push(plan.habitId)
-      }
+    if (!lhabits){
+      this.plannedForToday.value = []
+      return
     }
+
+    console.log("existen planes")
+    for (const habit of lhabits.plannedDays) {
+      console.log("el id del habito es ", habit)
+      ids.push(habit)
+    }
+    console.log("se cargo todos los putos planes de ",dayIndex)
     this.plannedForToday.value = ids
   }
 

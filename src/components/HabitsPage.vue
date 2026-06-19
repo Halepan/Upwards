@@ -11,7 +11,7 @@ import type { PlannerItem } from './WeekPlanner.vue'
 import { themeIcons } from '../config/theme.config'
 import { habitStore, useAuthStore } from '../store'
 import { storeToRefs } from 'pinia'
-import {clearAllData} from '../boom'
+
 const auth = useAuthStore()
 const { currentUser } = storeToRefs(auth)
 import type { Habit } from '../domain/habit'
@@ -47,14 +47,18 @@ const habits = computed<HabitLocal[]>(() =>
   }))
 )
 
-const todayHabits = computed(() =>
-  habits.value
-    .filter(h => habitStore.plannedForToday.value.includes(h.id))
-    .map(h => {
-      const log = h.logs.find(l => l.date === todayStr)
-      return { id: h.id, name: h.name, icon: h.icon, done: log?.done ?? false }
-    })
-)
+const todayHabits = computed(() => {
+  const plannedIds = habitStore.plannedForToday.value
+  const found = plannedIds
+    .map(id => habits.value.find(h => h.id === id))
+    .filter((h): h is HabitLocal => h !== undefined) // Type guard
+  return found.map(h => ({
+    id: h.id,
+    name: h.name,
+    icon: h.icon,
+    done: h.logs.some(log => log.date === todayStr && log.done)
+  }))
+})
 
 const completedToday = computed(() => todayHabits.value.filter(h => h.done).length)
 const plannedToday = computed(() => todayHabits.value.length)
@@ -85,7 +89,6 @@ function weekNum(d: Date): number {
 }
 
 function fmt(d: Date): string {
-  console.log('🗑️ Base de datos IndexedDB eliminada por completo')
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
@@ -236,11 +239,11 @@ async function saveHabit() {
   }
   editPanel.value = false
   editingHabit.value = null
+  console.log("ok")
 }
 
 function deleteHabit(habit: HabitLocal): void {
   habitStore.deleteHabit(habit.id)
-  clearAllData()
 }
 
 function onLongPressHabit(habit: HabitLocal, event: MouseEvent | TouchEvent): void {
@@ -260,8 +263,10 @@ const fabActions = computed<FabAction[]>(() => [
 ])
 
 async function onPlanConfirm(assignments: Record<number, number[]>) {
+  console.log("Entro a la confirmacion", assignments)
   await habitStore.saveWeekPlan(assignments)
   planningMode.value = false
+  
 }
 
 function onPlanCancel() {
