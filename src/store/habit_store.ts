@@ -131,26 +131,22 @@ export class HabitStore extends BaseStore<Habit> {
         undefined, uuidv4(), now, now,
         habitId, week.id!, days
       )
-      console.log(days,habitId)
       await this.weekPlanRepo.save(plan)
     }
-    console.log("guardada la semana con exito")
     this.loadWeekPlans()
   }
 
   async loadWeekPlans(): Promise<void> {
-    console.log("se esta cargando la semana")
     const weekStart = this.getWeekStart()
     const today = new Date()
     const dayIndex = ((today.getDay() + 6) % 7)
     this.currentWeekStart.value = weekStart
     const week = await this.weekRepo.findByStartDate(weekStart)
     if (!week) {
-      console.log("la semana no existe")
       this.plannedForToday.value = []
       return
     }
-    console.log("la semana ",week.id," se cargo correctamante")
+  
     const lhabits = await this.weekPlanRepo.findByHabitAndWeek(dayIndex, week.id!)
     const ids: number[] = []
     if (!lhabits){
@@ -158,12 +154,9 @@ export class HabitStore extends BaseStore<Habit> {
       return
     }
 
-    console.log("existen planes")
     for (const habit of lhabits.plannedDays) {
-      console.log("el id del habito es ", habit)
       ids.push(habit)
     }
-    console.log("se cargo todos los putos planes de ",dayIndex)
     this.plannedForToday.value = ids
   }
 

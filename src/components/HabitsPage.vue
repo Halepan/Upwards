@@ -47,18 +47,14 @@ const habits = computed<HabitLocal[]>(() =>
   }))
 )
 
-const todayHabits = computed(() => {
-  const plannedIds = habitStore.plannedForToday.value
-  const found = plannedIds
-    .map(id => habits.value.find(h => h.id === id))
-    .filter((h): h is HabitLocal => h !== undefined) // Type guard
-  return found.map(h => ({
-    id: h.id,
-    name: h.name,
-    icon: h.icon,
-    done: h.logs.some(log => log.date === todayStr && log.done)
-  }))
-})
+const todayHabits = computed(() =>
+  habits.value
+    .filter(h => habitStore.plannedForToday.value.includes(h.id))
+    .map(h => {
+      const log = h.logs.find(l => l.date === todayStr)
+      return { id: h.id, name: h.name, icon: h.icon, done: log?.done ?? false }
+    })
+)
 
 const completedToday = computed(() => todayHabits.value.filter(h => h.done).length)
 const plannedToday = computed(() => todayHabits.value.length)
