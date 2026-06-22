@@ -111,7 +111,6 @@ export class HabitStore extends BaseStore<Habit> {
   }
 
   async saveWeekPlan(assignments: Record<number, number[]>): Promise<void> {
-    console.log("saveWeekplan")
     const weekStart = this.getWeekStart()
     this.currentWeekStart.value = weekStart
     let week = await this.weekRepo.findByStartDate(weekStart)
@@ -158,7 +157,12 @@ export class HabitStore extends BaseStore<Habit> {
       const element = await this.weekPlanRepo.findByHabitAndWeek(index, week.id!);
       if (element?.plannedDays){
          this.plannedforWeek.value[index] = element.plannedDays
-         ides = [...ides, ...element.plannedDays.filter(e=> ides.includes(e))]   
+         ides = [...ides, ...element.plannedDays.filter(e=> !ides.includes(e))]
+         const temp = ides.reduce<number[]>((acc, n)=>{
+          if(!acc.includes(n)) acc.push(n)
+          return acc 
+         },[])
+         ides = temp
         }
       
     }
@@ -170,7 +174,7 @@ export class HabitStore extends BaseStore<Habit> {
       this.plannedForToday.value = []
       return
     }
-    this.counthabitforweek.value = ides.length + 1
+    this.counthabitforweek.value = ides.length
     this.plannedForToday.value = lhabits
     }
 
@@ -178,15 +182,12 @@ export class HabitStore extends BaseStore<Habit> {
     const now = new Date()
     const dayOfWeek = now.getDay()
     let past = 0
+
     if(last){
       past = 7
     }
     const diff = (now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1))-past
-    console.log(now.getDate())
-    console.log(diff)
-    
     const monday = new Date(now.setDate(diff))
-    console.log(monday)
     return monday.toISOString().split('T')[0]
   }
 

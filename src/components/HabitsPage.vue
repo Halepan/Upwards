@@ -235,7 +235,6 @@ async function saveHabit() {
   }
   editPanel.value = false
   editingHabit.value = null
-  console.log("ok")
 }
 
 function deleteHabit(habit: HabitLocal): void {
@@ -257,11 +256,10 @@ const assignamentswek = ref<Record<number,number[]>>({})
 const fabActions = computed<FabAction[]>(() => [
   { icon: isDark.value ? themeIcons.book.dark : themeIcons.book.light, label: 'Nuevo hábito', action: () => openEdit() },
   { icon: isDark.value ? themeIcons.leftBar.dark : themeIcons.leftBar.light, label: 'Planificar semana', action: () =>  onPlan()},
-  { icon: isDark.value ? themeIcons.check.dark : themeIcons.check.light, label: 'Editar semana planificada', action: () => { planningTitle.value = 'Editar semana planificada'; planningMode.value = true; repeat.value = false} },
+  { icon: isDark.value ? themeIcons.check.dark : themeIcons.check.light, label: 'Editar semana planificada', action: () => onPlan(true)},
 ])
 
 async function onPlanConfirm(assignments: Record<number, number[]>) {
-  console.log("Entro a la confirmacion", assignments)
   await habitStore.saveWeekPlan(assignments)
   planningMode.value = false
   
@@ -276,7 +274,7 @@ function onPlan(edit?:boolean){
   else{
     habitStore.loadWeekPlans();
     assignamentswek.value = habitStore.plannedforWeek.value
-    planningTitle.value = 'Planificar semana';
+    planningTitle.value = 'Editar Semana Planificada';
     planningMode.value = true;
     repeat.value = false;
   }

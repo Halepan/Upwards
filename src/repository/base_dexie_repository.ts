@@ -33,7 +33,6 @@ export abstract class BaseDexieRepository<
   }
 
   async save(entity: TDomain): Promise<TDomain> {
-    console.log("entro en la database")
     const dbObj = this.toDB(entity)
     const id = await this.table.put(dbObj as any)
     const saved = await this.table.get(id)
