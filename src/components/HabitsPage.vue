@@ -251,17 +251,35 @@ function onLongPressHabit(habit: HabitLocal, event: MouseEvent | TouchEvent): vo
 
 const planningMode = ref(false)
 const planningTitle = ref('')
+const repeat = ref()
+const assignamentswek = ref<Record<number,number[]>>({})
 
 const fabActions = computed<FabAction[]>(() => [
   { icon: isDark.value ? themeIcons.book.dark : themeIcons.book.light, label: 'Nuevo hábito', action: () => openEdit() },
-  { icon: isDark.value ? themeIcons.leftBar.dark : themeIcons.leftBar.light, label: 'Planificar semana', action: () => { planningTitle.value = 'Planificar semana'; planningMode.value = true } },
-  { icon: isDark.value ? themeIcons.check.dark : themeIcons.check.light, label: 'Editar semana planificada', action: () => { planningTitle.value = 'Editar semana planificada'; planningMode.value = true } },
+  { icon: isDark.value ? themeIcons.leftBar.dark : themeIcons.leftBar.light, label: 'Planificar semana', action: () =>  onPlan()},
+  { icon: isDark.value ? themeIcons.check.dark : themeIcons.check.light, label: 'Editar semana planificada', action: () => { planningTitle.value = 'Editar semana planificada'; planningMode.value = true; repeat.value = false} },
 ])
 
 async function onPlanConfirm(assignments: Record<number, number[]>) {
   console.log("Entro a la confirmacion", assignments)
   await habitStore.saveWeekPlan(assignments)
   planningMode.value = false
+  
+}
+
+function onPlan(edit?:boolean){
+  if(!edit){ 
+    planningTitle.value = 'Planificar semana';
+    planningMode.value = true;
+    repeat.value = true;
+  }
+  else{
+    habitStore.loadWeekPlans();
+    assignamentswek.value = habitStore.plannedforWeek.value
+    planningTitle.value = 'Planificar semana';
+    planningMode.value = true;
+    repeat.value = false;
+  }
   
 }
 
@@ -276,6 +294,11 @@ function onPlanEdit(item: PlannerItem) {
 
 function onPlanDelete(item: PlannerItem) {
   habitStore.deleteHabit(item.id)
+}
+
+async function repeatLastWeek(){
+  await habitStore.loadWeekPlans(true)
+  return assignamentswek.value = habitStore.plannedforWeek.value
 }
 
 function toggleToday(habitId: number): void {
@@ -382,11 +405,15 @@ watch(viewMode, async () => {
     v-if="planningMode"
     :items="habits.map(h => ({ id: h.id, name: h.name, icon: h.icon }))"
     :title="planningTitle"
+    :showRepeatBotton="repeat"
+    :initial-assignments="assignamentswek"
     @confirm="onPlanConfirm"
     @cancel="onPlanCancel"
     @edit="onPlanEdit"
     @delete="onPlanDelete"
+    @repetlastweek="repeatLastWeek"
   />
+
   <div v-else class="habits-page">
     <header class="habits-header">
       <div class="progress-box">

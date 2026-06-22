@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch} from 'vue'
 import { useTheme } from '../composables/useTheme'
 import ContextMenu from './ContextMenu.vue'
 import { themeIcons } from '../config/theme.config'
@@ -16,6 +16,8 @@ export interface PlannerItem {
 const props = defineProps<{
   items: PlannerItem[]
   title: string
+  showRepeatBotton: boolean
+  initialAssignments: Record<number, number[]> 
 }>()
 
 const emit = defineEmits<{
@@ -23,7 +25,7 @@ const emit = defineEmits<{
   cancel: []
   edit: [item: PlannerItem]
   delete: [item: PlannerItem]
-  repetlastweek: [assignments: Record<number, number[]>]
+  repetlastweek: []
 }>()
 
 const searchQuery = ref('')
@@ -41,6 +43,12 @@ const filteredItems = computed(() => {
 
 const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 const dayNamesShort = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM']
+
+watch(() => props.initialAssignments, (newVal) => {
+  if (newVal) {
+    assignments.value = { ...newVal }
+  }
+}, { deep: true })
 
 function onMouseDown(item: PlannerItem, event: MouseEvent) {
   mouseStart.value = { x: event.clientX, y: event.clientY, item }
@@ -181,8 +189,9 @@ function cancelConfirm() {
   confirmState.value = null
 }
 
+
 function repeatLastWeek() {
-  // Placeholder: copies assignments from last week
+  emit("repetlastweek")
 }
 </script>
 
@@ -240,7 +249,7 @@ function repeatLastWeek() {
       </aside>
 
       <div class="week-grid">
-        <button class="repeat-btn" @click="repeatLastWeek" title="Repetir semana anterior">
+        <button v-if= "showRepeatBotton && !hasAssignments()" class="repeat-btn" @click="repeatLastWeek" title="Repetir semana anterior">
           <svg viewBox="0 0 24 24" width="16" height="16">
             <path d="M17 2l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             <path d="M3 11v-1a4 4 0 014-4h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
