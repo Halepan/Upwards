@@ -25,6 +25,8 @@ export class HabitStore extends BaseStore<Habit> {
   selectedHabit: Ref<Habit | null>
   plannedForToday: Ref<number[]>
   currentWeekStart: Ref<string>
+  plannedforWeek:  Ref<Record<number,number[]>>
+  counthabitforweek: Ref<number>
 
   constructor() {
     super()
@@ -42,7 +44,10 @@ export class HabitStore extends BaseStore<Habit> {
     this.selectedHabit = ref<Habit | null>(null) as Ref<Habit | null>
     this.plannedForToday = ref<number[]>([]) as Ref<number[]>
     this.currentWeekStart = ref('') as Ref<string>
+    this.plannedforWeek =   ref<Record<number,number[]>>({}) as Ref<Record<number, number[]>>
+    this.counthabitforweek = ref() as Ref<number>  
   }
+
 
   async loadAll(): Promise<void> {
     await this.fetchAll()
@@ -136,35 +141,52 @@ export class HabitStore extends BaseStore<Habit> {
     this.loadWeekPlans()
   }
 
-  async loadWeekPlans(): Promise<void> {
-    const weekStart = this.getWeekStart()
+  async loadWeekPlans(last?: boolean): Promise<void> {
+    let ides: number[] = []
+    const weekStart = this.getWeekStart(last)
     const today = new Date()
     const dayIndex = ((today.getDay() + 6) % 7)
     this.currentWeekStart.value = weekStart
     const week = await this.weekRepo.findByStartDate(weekStart)
+    
     if (!week) {
       this.plannedForToday.value = []
       return
     }
-  
-    const lhabits = await this.weekPlanRepo.findByHabitAndWeek(dayIndex, week.id!)
-    const ids: number[] = []
+   
+    for (let index = 0; index < 7; index++) {
+      const element = await this.weekPlanRepo.findByHabitAndWeek(index, week.id!);
+      if (element?.plannedDays){
+         this.plannedforWeek.value[index] = element.plannedDays
+         ides = [...ides, ...element.plannedDays.filter(e=> ides.includes(e))]   
+        }
+      
+    }
+
+    if (last) return
+
+    const lhabits = this.plannedforWeek.value[dayIndex]
     if (!lhabits){
       this.plannedForToday.value = []
       return
     }
-
-    for (const habit of lhabits.plannedDays) {
-      ids.push(habit)
+    this.counthabitforweek.value = ides.length + 1
+    this.plannedForToday.value = lhabits
     }
-    this.plannedForToday.value = ids
-  }
 
-  private getWeekStart(): string {
+  private getWeekStart(last?:boolean): string {
     const now = new Date()
     const dayOfWeek = now.getDay()
-    const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1)
+    let past = 0
+    if(last){
+      past = 7
+    }
+    const diff = (now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1))-past
+    console.log(now.getDate())
+    console.log(diff)
+    
     const monday = new Date(now.setDate(diff))
+    console.log(monday)
     return monday.toISOString().split('T')[0]
   }
 

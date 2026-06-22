@@ -412,7 +412,7 @@ watch(viewMode, async () => {
       </div>
       <div class="planned-box">
         <span class="planned-box-title">Planificados esta semana</span>
-        <span class="planned-stats">{{ habits.length }} hábitos</span>
+        <span class="planned-stats">{{ habitStore.counthabitforweek.value }} hábitos</span>
         <span class="planned-week">Semana {{ weekNum(today) }}</span>
       </div>
     </header>

@@ -23,6 +23,7 @@ const emit = defineEmits<{
   cancel: []
   edit: [item: PlannerItem]
   delete: [item: PlannerItem]
+  repetlastweek: [assignments: Record<number, number[]>]
 }>()
 
 const searchQuery = ref('')
