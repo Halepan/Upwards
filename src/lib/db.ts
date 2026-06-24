@@ -22,6 +22,7 @@ export interface User extends BaseEntity {
 
 export interface Account extends BaseEntity {
   user_id: number
+  user_uuid: string
   name: string
   type: 'spendable' | 'savings' | 'investment' | 'donation'
   balance: number
@@ -29,14 +30,16 @@ export interface Account extends BaseEntity {
 
 export interface IncomeEntry extends BaseEntity {
   user_id: number
+  user_uuid: string
   amount: number
   classification: 'pasivo' | 'timeswap' | 'give' | 'otro'
   note?: string
-  date: string // YYYY-MM-DD
+  date: string
 }
 
 export interface ExpenseEntry extends BaseEntity {
   account_id: number
+  account_uuid: string
   amount: number
   category: string
   note?: string
@@ -44,13 +47,16 @@ export interface ExpenseEntry extends BaseEntity {
 }
 
 export interface AutoPercentRule extends BaseEntity {
+  source_account_id: string | null
   target_account_id: number
+  target_account_uuid: string
   percentage: number
   is_active: boolean
 }
 
 export interface Habit extends BaseEntity {
   user_id: number
+  user_uuid: string
   name: string
   description?: string
   frequency_goal: number
@@ -61,6 +67,7 @@ export interface Habit extends BaseEntity {
 
 export interface HabitLog extends BaseEntity {
   habit_id: number
+  habit_uuid: string
   date: string
   status: 'completed' | 'missed' | 'planned'
   completed_at?: string
@@ -68,6 +75,7 @@ export interface HabitLog extends BaseEntity {
 
 export interface Week extends BaseEntity {
   user_id: number
+  user_uuid: string
   start_date: string
   end_date?: string
   notes?: string
@@ -75,12 +83,15 @@ export interface Week extends BaseEntity {
 
 export interface HabitWeekPlan extends BaseEntity {
   habit_id: number
+  habit_uuid: string
   week_id: number
+  week_uuid: string
   planned_days: number[]
 }
 
 export interface Exercise extends BaseEntity {
   user_id: number
+  user_uuid: string
   name: string
   type: 'fuerza' | 'resistencia'
   sub_type?: string
@@ -90,6 +101,7 @@ export interface Exercise extends BaseEntity {
 
 export interface Routine extends BaseEntity {
   user_id: number
+  user_uuid: string
   name: string
   description?: string
   is_active: boolean
@@ -97,7 +109,9 @@ export interface Routine extends BaseEntity {
 
 export interface RoutineExercise extends BaseEntity {
   routine_id: number
+  routine_uuid: string
   exercise_id: number
+  exercise_uuid: string
   target_reps: number
   order_index: number
   notes?: string
@@ -105,6 +119,7 @@ export interface RoutineExercise extends BaseEntity {
 
 export interface RoutineLog extends BaseEntity {
   routine_id: number
+  routine_uuid: string
   date: string
   notes?: string
   completed: boolean
@@ -112,12 +127,15 @@ export interface RoutineLog extends BaseEntity {
 
 export interface RoutineLogDetail extends BaseEntity {
   routine_log_id: number
+  routine_log_uuid: string
   exercise_id: number
+  exercise_uuid: string
   reps_done: number
 }
 
 export interface BodyMeasurement extends BaseEntity {
   user_id: number
+  user_uuid: string
   date: string
   weight_kg?: number
   body_fat_percent?: number
@@ -129,6 +147,7 @@ export interface BodyMeasurement extends BaseEntity {
 
 export interface BiometricMetric extends BaseEntity {
   user_id: number
+  user_uuid: string
   timestamp: string
   heart_rate?: number
   steps?: number
@@ -169,23 +188,23 @@ export class UpwardsDB extends Dexie {
   constructor() {
     super('UpwardsDB')
 
-    this.version(1).stores({
+    this.version(2).stores({
       users: '++id, &uuid, email, sync_status',
-      accounts: '++id, &uuid, user_id, type, sync_status',
-      income_entries: '++id, &uuid, user_id, date, sync_status',
-      expense_entries: '++id, &uuid, account_id, date, sync_status',
-      auto_percent_rules: '++id, &uuid, target_account_id, sync_status',
-      habits: '++id, &uuid, user_id, sync_status',
-      habit_logs: '++id, &uuid, habit_id, date, sync_status, [habit_id+date]',
-      weeks: '++id, &uuid, user_id, &start_date, sync_status',
-      habit_week_plans: '++id, &uuid, habit_id, week_id, sync_status, [habit_id+week_id]',
-      exercises: '++id, &uuid, user_id, sync_status',
-      routines: '++id, &uuid, user_id, sync_status',
-      routine_exercises: '++id, &uuid, routine_id, exercise_id, sync_status, [routine_id+exercise_id]',
-      routine_logs: '++id, &uuid, routine_id, date, sync_status',
-      routine_log_details: '++id, &uuid, routine_log_id, exercise_id, sync_status, [routine_log_id+exercise_id]',
-      body_measurements: '++id, &uuid, user_id, date, sync_status',
-      biometric_metrics: '++id, &uuid, user_id, timestamp, sync_status',
+      accounts: '++id, &uuid, user_id, user_uuid, type, sync_status',
+      income_entries: '++id, &uuid, user_id, user_uuid, date, sync_status',
+      expense_entries: '++id, &uuid, account_id, account_uuid, date, sync_status',
+      auto_percent_rules: '++id, &uuid, target_account_id, target_account_uuid, sync_status',
+      habits: '++id, &uuid, user_id, user_uuid, sync_status',
+      habit_logs: '++id, &uuid, habit_id, habit_uuid, date, sync_status, [habit_id+date], [habit_uuid+date]',
+      weeks: '++id, &uuid, user_id, user_uuid, &start_date, sync_status',
+      habit_week_plans: '++id, &uuid, habit_id, habit_uuid, week_id, week_uuid, sync_status, [habit_id+week_id], [habit_uuid+week_uuid]',
+      exercises: '++id, &uuid, user_id, user_uuid, sync_status',
+      routines: '++id, &uuid, user_id, user_uuid, sync_status',
+      routine_exercises: '++id, &uuid, routine_id, routine_uuid, exercise_id, exercise_uuid, sync_status, [routine_id+exercise_id]',
+      routine_logs: '++id, &uuid, routine_id, routine_uuid, date, sync_status',
+      routine_log_details: '++id, &uuid, routine_log_id, routine_log_uuid, exercise_id, exercise_uuid, sync_status, [routine_log_id+exercise_id]',
+      body_measurements: '++id, &uuid, user_id, user_uuid, date, sync_status',
+      biometric_metrics: '++id, &uuid, user_id, user_uuid, timestamp, sync_status',
       sync_queue: '++id, table_name, timestamp, attempts'
     })
 

@@ -5,6 +5,7 @@ import { useLanguage } from '../composables/useLanguage'
 import { themeIcons, themeColors } from '../config/theme.config'
 import ProfilePanel from './ProfilePanel.vue'
 import SettingsPanel from './SettingsPanel.vue'
+import { useAuthStore } from '../store/auth_store'
 
 export type Section = 'finanzas' | 'habitos' | 'fitness'
 
@@ -57,6 +58,11 @@ function toggleMenu(): void {
 
 function closeMenu(): void {
   menuOpen.value = false
+}
+
+function handleLogout(): void {
+  closeMenu()
+  useAuthStore().logout()
 }
 </script>
 
@@ -136,6 +142,13 @@ function closeMenu(): void {
                   :style="{ color: textColor }"
                 >
                   Configuración
+                </button>
+                <button
+                  class="menu-item logout-item"
+                  @click="handleLogout"
+                  :style="{ color: '#c62828' }"
+                >
+                  Cerrar sesión
                 </button>
               </div>
               <div class="menu-footer" :style="{ borderTopColor: borderColor }">
@@ -357,6 +370,11 @@ function closeMenu(): void {
 .menu-footer {
   border-top: 1px solid;
   padding: 8px 12px;
+}
+
+.logout-item {
+  border-top: 1px solid var(--color-border);
+  margin-top: 4px;
 }
 
 .theme-toggle-inline {

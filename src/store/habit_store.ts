@@ -10,6 +10,7 @@ import { WeekRepository } from '../repository/week_repository'
 import { HabitWeekPlanRepository } from '../repository/habit_week_plan_repository'
 import { HabitService, type CreateHabitDTO, type WeeklyProgress } from '../service/habit_service'
 import { BaseStore } from './base_store'
+import { useAuthStore } from './auth_store'
 import { v4 as uuidv4 } from 'uuid'
 
 export class HabitStore extends BaseStore<Habit> {
@@ -55,24 +56,30 @@ export class HabitStore extends BaseStore<Habit> {
   }
 
   async createHabit(data: CreateHabitDTO): Promise<Habit> {
-    const habit = await this.service.createHabit(data.userId, data)
+    const dataWithUuid: CreateHabitDTO = {
+      ...data,
+      userUuid: useAuthStore().currentUser?.uuid || '',
+    }
+    const habit = await this.service.createHabit(dataWithUuid.userId, dataWithUuid)
     this._items.value.push(habit)
     await this.loadWeekPlans()
     return habit
   }
 
   async markDay(habitId: number, date: string, status: HabitStatus): Promise<void> {
-    await this.service.markDay(habitId, date, status)
+    const habit = this._items.value.find(h => h.id === habitId)
+    await this.service.markDay(habitId, date, status, habit?.uuid)
     await this.refreshLogs(habitId)
   }
 
   async toggleDay(habitId: number, date: string): Promise<void> {
     const existing = this.allLogs.value.find(l => l.habitId === habitId && l.date === date)
+    const habit = this._items.value.find(h => h.id === habitId)
     if (existing) {
       const newStatus: HabitStatus = existing.status === 'completed' ? 'missed' : 'completed'
-      await this.service.markDay(habitId, date, newStatus)
+      await this.service.markDay(habitId, date, newStatus, habit?.uuid)
     } else {
-      await this.service.markDay(habitId, date, 'completed')
+      await this.service.markDay(habitId, date, 'completed', habit?.uuid)
     }
     this.allLogs.value = await this.logRepo.findAll()
   }
@@ -116,11 +123,12 @@ export class HabitStore extends BaseStore<Habit> {
     let week = await this.weekRepo.findByStartDate(weekStart)
     if (!week) {
       console.log("la semana no existe")
+      const userUuid = useAuthStore().currentUser?.uuid || ''
       const now = new Date().toISOString()
       const endDate = this.getWeekEnd()
       week = await this.weekRepo.save(new Week(
         undefined, uuidv4(), now, now,
-        0, weekStart, endDate
+        0, userUuid, weekStart, endDate
       ))
     }
     const existingPlans = await this.weekPlanRepo.findAllByWeek(week.id!)
@@ -131,9 +139,10 @@ export class HabitStore extends BaseStore<Habit> {
       const habitId = Number(habitIdStr)
       if (days.length === 0) continue
       const now = new Date().toISOString()
+      const habit = this._items.value.find(h => h.id === habitId)
       const plan = new HabitWeekPlan(
         undefined, uuidv4(), now, now,
-        habitId, week.id!, days
+        habitId, habit?.uuid || '', week.id!, week.uuid, days
       )
       await this.weekPlanRepo.save(plan)
     }

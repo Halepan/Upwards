@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid'
 /* DTO para registrar un ingreso con clasificación financiera. */
 export interface IncomeDTO {
   userId: number
+  userUuid?: string
   amount: number
   classification: IncomeClassification
   date: string
@@ -19,6 +20,7 @@ export interface IncomeDTO {
 /* DTO para registrar un gasto asociado a una cuenta. */
 export interface ExpenseDTO {
   accountId: number
+  accountUuid?: string
   amount: number
   category: string
   date: string
@@ -48,7 +50,7 @@ export class FinanceService {
     const now = new Date().toISOString()
     const entry = new IncomeEntry(
       undefined, uuidv4(), now, now,
-      userId, data.amount, data.classification, data.date, data.note
+      userId, data.userUuid || '', data.amount, data.classification, data.date, data.note
     )
     const savedEntry = await this.incomeRepo.save(entry)
     await this.applyAutoPercentRules(savedEntry.id!)
@@ -64,7 +66,7 @@ export class FinanceService {
     const now = new Date().toISOString()
     const entry = new ExpenseEntry(
       undefined, uuidv4(), now, now,
-      accountId, data.amount, data.category, data.date, data.note
+      accountId, data.accountUuid || '', data.amount, data.category, data.date, data.note
     )
     const savedEntry = await this.expenseRepo.save(entry)
     await this.accountRepo.save(account)

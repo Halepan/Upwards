@@ -5,6 +5,7 @@ import { BaseEntity } from './base_entity'
 
 export class Habit extends BaseEntity {
   private _userId: number
+  private _userUuid: string
   private _name: string
   private _description?: string
   private _frequencyGoal: number
@@ -18,6 +19,7 @@ export class Habit extends BaseEntity {
     createdAt: string,
     updatedAt: string,
     userId: number,
+    userUuid: string,
     name: string,
     description?: string,
     frequencyGoal: number = 7,
@@ -27,6 +29,7 @@ export class Habit extends BaseEntity {
   ) {
     super(id, uuid, createdAt, updatedAt)
     this._userId = userId
+    this._userUuid = userUuid
     this._name = name
     this._description = description
     this._frequencyGoal = frequencyGoal
@@ -36,6 +39,7 @@ export class Habit extends BaseEntity {
   }
 
   get userId(): number { return this._userId }
+  get userUuid(): string { return this._userUuid }
   get name(): string { return this._name }
   get description(): string | undefined { return this._description }
   get frequencyGoal(): number { return this._frequencyGoal }
@@ -88,6 +92,7 @@ export class Habit extends BaseEntity {
       data.created_at,
       data.updated_at,
       data.user_id,
+      data.user_uuid,
       data.name,
       data.description,
       data.frequency_goal,
@@ -102,6 +107,7 @@ export class Habit extends BaseEntity {
       id: this._id,
       uuid: this._uuid,
       user_id: this._userId,
+      user_uuid: this._userUuid,
       name: this._name,
       description: this._description,
       frequency_goal: this._frequencyGoal,

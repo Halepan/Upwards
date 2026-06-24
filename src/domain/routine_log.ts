@@ -4,6 +4,7 @@ import { BaseEntity } from './base_entity'
 
 export class RoutineLog extends BaseEntity {
   private _routineId: number
+  private _routineUuid: string
   private _date: string
   private _notes?: string
   private _completed: boolean
@@ -14,18 +15,21 @@ export class RoutineLog extends BaseEntity {
     createdAt: string,
     updatedAt: string,
     routineId: number,
+    routineUuid: string,
     date: string,
     notes?: string,
     completed: boolean = false
   ) {
     super(id, uuid, createdAt, updatedAt)
     this._routineId = routineId
+    this._routineUuid = routineUuid
     this._date = date
     this._notes = notes
     this._completed = completed
   }
 
   get routineId(): number { return this._routineId }
+  get routineUuid(): string { return this._routineUuid }
   get date(): string { return this._date }
   get notes(): string | undefined { return this._notes }
   get completed(): boolean { return this._completed }
@@ -56,6 +60,7 @@ export class RoutineLog extends BaseEntity {
       data.created_at,
       data.updated_at,
       data.routine_id,
+      data.routine_uuid,
       data.date,
       data.notes,
       data.completed
@@ -67,6 +72,7 @@ export class RoutineLog extends BaseEntity {
       id: this._id,
       uuid: this._uuid,
       routine_id: this._routineId,
+      routine_uuid: this._routineUuid,
       date: this._date,
       notes: this._notes,
       completed: this._completed,

@@ -15,6 +15,7 @@ import {
   type ProgressComparison,
 } from '../service/routine_service'
 import { BaseStore } from './base_store'
+import { useAuthStore } from './auth_store'
 
 export class FitnessStore extends BaseStore<Exercise> {
   protected repository: ExerciseRepository
@@ -54,7 +55,11 @@ export class FitnessStore extends BaseStore<Exercise> {
   }
 
   async createRoutine(userId: number, data: RoutineDTO): Promise<Routine> {
-    const routine = await this.service.createRoutine(userId, data)
+    const dataWithUuid: RoutineDTO = {
+      ...data,
+      userUuid: useAuthStore().currentUser?.uuid || '',
+    }
+    const routine = await this.service.createRoutine(userId, dataWithUuid)
     this.routines.value.push(routine)
     return routine
   }
@@ -64,7 +69,12 @@ export class FitnessStore extends BaseStore<Exercise> {
   }
 
   async logWorkout(routineId: number, date: string, details: LogDetailDTO[]): Promise<RoutineLog> {
-    const log = await this.service.logWorkout(routineId, date, details)
+    const routine = this.routines.value.find(r => r.id === routineId)
+    const detailsWithUuid: LogDetailDTO[] = details.map(d => ({
+      ...d,
+      exerciseUuid: this._items.value.find(e => e.id === d.exerciseId)?.uuid || '',
+    }))
+    const log = await this.service.logWorkout(routineId, routine?.uuid || '', date, detailsWithUuid)
     this.routineLogs.value.push(log)
     return log
   }
@@ -79,7 +89,8 @@ export class FitnessStore extends BaseStore<Exercise> {
   }
 
   async addExercise(userId: number, name: string, type: string, subType?: string): Promise<any> {
-    const id = await db.exercises.put({ name, type, sub_type: subType, is_custom: true, user_id: userId } as any)
+    const userUuid = useAuthStore().currentUser?.uuid || ''
+    const id = await db.exercises.put({ name, type, sub_type: subType, is_custom: true, user_id: userId, user_uuid: userUuid } as any)
     await this.fetchAll()
     return this._items.value.find((e: any) => e.id === id)
   }
@@ -98,7 +109,8 @@ export class FitnessStore extends BaseStore<Exercise> {
   }
 
   async saveBodyMeasurement(data: Partial<BMData>): Promise<BMData> {
-    const id = await db.body_measurements.put(data as any)
+    const userUuid = useAuthStore().currentUser?.uuid || ''
+    const id = await db.body_measurements.put({ ...data, user_uuid: userUuid } as any)
     await this.loadBodyMeasurements(data.user_id || 0)
     return (await db.body_measurements.get(id)) as any
   }

@@ -6,6 +6,7 @@ export type IncomeClassification = 'pasivo' | 'timeswap' | 'give' | 'otro'
 
 export class IncomeEntry extends BaseEntity {
   private _userId: number
+  private _userUuid: string
   private _amount: number
   private _classification: IncomeClassification
   private _note?: string
@@ -17,6 +18,7 @@ export class IncomeEntry extends BaseEntity {
     createdAt: string,
     updatedAt: string,
     userId: number,
+    userUuid: string,
     amount: number,
     classification: IncomeClassification,
     date: string,
@@ -25,6 +27,7 @@ export class IncomeEntry extends BaseEntity {
     super(id, uuid, createdAt, updatedAt)
     if (amount <= 0) throw new Error('El monto debe ser mayor que cero')
     this._userId = userId
+    this._userUuid = userUuid
     this._amount = amount
     this._classification = classification
     this._date = date
@@ -32,6 +35,7 @@ export class IncomeEntry extends BaseEntity {
   }
 
   get userId(): number { return this._userId }
+  get userUuid(): string { return this._userUuid }
   get amount(): number { return this._amount }
   get classification(): IncomeClassification { return this._classification }
   get note(): string | undefined { return this._note }
@@ -62,6 +66,7 @@ export class IncomeEntry extends BaseEntity {
       data.created_at,
       data.updated_at,
       data.user_id,
+      data.user_uuid,
       data.amount,
       data.classification as IncomeClassification,
       data.date,
@@ -74,6 +79,7 @@ export class IncomeEntry extends BaseEntity {
       id: this._id,
       uuid: this._uuid,
       user_id: this._userId,
+      user_uuid: this._userUuid,
       amount: this._amount,
       classification: this._classification,
       note: this._note,

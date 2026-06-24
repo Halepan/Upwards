@@ -5,7 +5,9 @@ import { BaseEntity } from './base_entity'
 
 export class HabitWeekPlan extends BaseEntity {
   private _habitId: number
+  private _habitUuid: string
   private _weekId: number
+  private _weekUuid: string
   private _plannedDays: number[]
 
   constructor(
@@ -14,17 +16,23 @@ export class HabitWeekPlan extends BaseEntity {
     createdAt: string,
     updatedAt: string,
     habitId: number,
+    habitUuid: string,
     weekId: number,
+    weekUuid: string,
     plannedDays: number[] = []
   ) {
     super(id, uuid, createdAt, updatedAt)
     this._habitId = habitId
+    this._habitUuid = habitUuid
     this._weekId = weekId
+    this._weekUuid = weekUuid
     this._plannedDays = plannedDays
   }
 
   get habitId(): number { return this._habitId }
+  get habitUuid(): string { return this._habitUuid }
   get weekId(): number { return this._weekId }
+  get weekUuid(): string { return this._weekUuid }
   get plannedDays(): number[] { return [...this._plannedDays] }
 
   set plannedDays(value: number[]) {
@@ -62,7 +70,9 @@ export class HabitWeekPlan extends BaseEntity {
       data.created_at,
       data.updated_at,
       data.habit_id,
+      data.habit_uuid,
       data.week_id,
+      data.week_uuid,
       data.planned_days ? JSON.parse(JSON.stringify(data.planned_days)) : []
     )
   }
@@ -72,7 +82,9 @@ export class HabitWeekPlan extends BaseEntity {
       id: this._id,
       uuid: this._uuid,
       habit_id: this._habitId,
+      habit_uuid: this._habitUuid,
       week_id: this._weekId,
+      week_uuid: this._weekUuid,
       planned_days: this._plannedDays,
       created_at: this._createdAt,
       updated_at: this._updatedAt,

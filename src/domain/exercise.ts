@@ -7,6 +7,7 @@ export type ExerciseSubType = 'core' | 'abdominal' | 'inferior' | 'superior' | '
 
 export class Exercise extends BaseEntity {
   private _userId: number
+  private _userUuid: string
   private _name: string
   private _type: ExerciseType
   private _subType?: ExerciseSubType
@@ -19,6 +20,7 @@ export class Exercise extends BaseEntity {
     createdAt: string,
     updatedAt: string,
     userId: number,
+    userUuid: string,
     name: string,
     type: ExerciseType,
     subType?: ExerciseSubType,
@@ -27,6 +29,7 @@ export class Exercise extends BaseEntity {
   ) {
     super(id, uuid, createdAt, updatedAt)
     this._userId = userId
+    this._userUuid = userUuid
     this._name = name
     this._type = type
     this._subType = subType
@@ -35,6 +38,7 @@ export class Exercise extends BaseEntity {
   }
 
   get userId(): number { return this._userId }
+  get userUuid(): string { return this._userUuid }
   get name(): string { return this._name }
   get type(): ExerciseType { return this._type }
   get subType(): ExerciseSubType | undefined { return this._subType }
@@ -71,6 +75,7 @@ export class Exercise extends BaseEntity {
       data.created_at,
       data.updated_at,
       data.user_id,
+      data.user_uuid,
       data.name,
       data.type as ExerciseType,
       data.sub_type as ExerciseSubType | undefined,
@@ -84,6 +89,7 @@ export class Exercise extends BaseEntity {
       id: this._id,
       uuid: this._uuid,
       user_id: this._userId,
+      user_uuid: this._userUuid,
       name: this._name,
       type: this._type,
       sub_type: this._subType,

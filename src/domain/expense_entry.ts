@@ -4,6 +4,7 @@ import { BaseEntity } from './base_entity'
 
 export class ExpenseEntry extends BaseEntity {
   private _accountId: number
+  private _accountUuid: string
   private _amount: number
   private _category: string
   private _note?: string
@@ -15,6 +16,7 @@ export class ExpenseEntry extends BaseEntity {
     createdAt: string,
     updatedAt: string,
     accountId: number,
+    accountUuid: string,
     amount: number,
     category: string,
     date: string,
@@ -23,6 +25,7 @@ export class ExpenseEntry extends BaseEntity {
     super(id, uuid, createdAt, updatedAt)
     if (amount <= 0) throw new Error('El monto debe ser mayor que cero')
     this._accountId = accountId
+    this._accountUuid = accountUuid
     this._amount = amount
     this._category = category
     this._date = date
@@ -30,6 +33,7 @@ export class ExpenseEntry extends BaseEntity {
   }
 
   get accountId(): number { return this._accountId }
+  get accountUuid(): string { return this._accountUuid }
   get amount(): number { return this._amount }
   get category(): string { return this._category }
   get note(): string | undefined { return this._note }
@@ -60,6 +64,7 @@ export class ExpenseEntry extends BaseEntity {
       data.created_at,
       data.updated_at,
       data.account_id,
+      data.account_uuid,
       data.amount,
       data.category,
       data.date,
@@ -72,6 +77,7 @@ export class ExpenseEntry extends BaseEntity {
       id: this._id,
       uuid: this._uuid,
       account_id: this._accountId,
+      account_uuid: this._accountUuid,
       amount: this._amount,
       category: this._category,
       note: this._note,

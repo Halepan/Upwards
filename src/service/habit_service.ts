@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid'
 /* DTO para la creación de un nuevo hábito. */
 export interface CreateHabitDTO {
   userId: number
+  userUuid?: string
   name: string
   description?: string
   frequencyGoal?: number
@@ -49,7 +50,7 @@ export class HabitService {
     const now = new Date().toISOString()
     const habit = new Habit(
       undefined, uuidv4(), now, now,
-      userId, data.name, data.description,
+      userId, data.userUuid || '', data.name, data.description,
       data.frequencyGoal, data.color, data.icon
     )
     return this.habitRepo.save(habit)
@@ -57,7 +58,7 @@ export class HabitService {
 
   /* Marca el estado diario de un hábito (completado/perdido/planeado).
      Si ya existe un registro, lo actualiza; si no, crea uno nuevo. */
-  async markDay(habitId: number, date: string, status: HabitStatus): Promise<void> {
+  async markDay(habitId: number, date: string, status: HabitStatus, habitUuid?: string): Promise<void> {
     const existingLog = await this.habitLogRepo.findByHabitAndDate(habitId, date)
     if (existingLog) {
       if (status === 'completed') existingLog.markCompleted()
@@ -68,7 +69,7 @@ export class HabitService {
       const now = new Date().toISOString()
       const log = new HabitLog(
         undefined, uuidv4(), now, now,
-        habitId, date, status,
+        habitId, habitUuid || '', date, status,
         status === 'completed' ? now : undefined
       )
       await this.habitLogRepo.save(log)

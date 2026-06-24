@@ -26,12 +26,13 @@ const { currentUser } = storeToRefs(auth)
 type Trend = 'up' | 'down' | 'flat'
 
 interface Derivation {
-  sourceAccountId: number
+  sourceAccountId: string
   percentage: number
 }
 
 interface AccountCard {
   id: number
+  uuid: string
   name: string
   balance: number
   prevBalance: number
@@ -55,6 +56,7 @@ function initAccounts() {
   accounts.value = financeStore.items.length > 0
     ? financeStore.items.map((a: any) => ({
         id: a.id!,
+        uuid: a.uuid,
         name: a.name,
         balance: a.balance,
         prevBalance: a.balance,
@@ -203,18 +205,18 @@ const acctFormBalance = ref(0)
 const acctFormColor = ref('#00897b')
 const acctFormAdvanced = ref(false)
 // Derivations config: for each source account (excluding self), store percentage
-const acctFormDerivations = ref<{ accountId: number; name: string; pct: number }[]>([])
+const acctFormDerivations = ref<{accountId:number; accountUuid: string; name: string; pct: number }[]>([])
 
 const accountColors = ['#00897b', '#1565c0', '#e65100', '#6a1b9a', '#2e7d32', '#f9a825', '#ec407a', '#ab47bc', '#26c6da', '#8d6e63']
 
-function initDerivations(excludeId?: number) {
+function initDerivations(excludeUuid?: string) {
   acctFormDerivations.value = accounts.value
-    .filter(a => a.id !== excludeId)
+    .filter(a => a.uuid !== excludeUuid)
     .map(a => {
-      const existing = excludeId
-        ? accounts.value.find(ac => ac.id === excludeId)?.derivations.find(d => d.sourceAccountId === a.id)
+      const existing = excludeUuid
+        ? accounts.value.find(ac => ac.uuid === excludeUuid)?.derivations.find(d => d.sourceAccountId === a.uuid)
         : null
-      return { accountId: a.id, name: a.name, pct: existing?.percentage || 0 }
+      return { accountId: a.id,accountUuid: a.uuid, name: a.name, pct: existing?.percentage || 0 }
     })
 }
 
@@ -225,7 +227,7 @@ function openAccountForm(acct?: AccountCard) {
     acctFormBalance.value = acct.balance
     acctFormColor.value = acct.color
     acctFormAdvanced.value = acct.derivations.length > 0
-    initDerivations(acct.id)
+    initDerivations(acct.uuid)
     panelTitle.value = `Editar ${acct.name}`
   } else {
     editingAccount.value = null
@@ -242,10 +244,12 @@ function openAccountForm(acct?: AccountCard) {
 async function saveAccount() {
   if (!acctFormName.value.trim()) return
   if (!currentUser.value) return
+  
   const derivations: Derivation[] = acctFormAdvanced.value
-    ? acctFormDerivations.value.filter(d => d.pct > 0).map(d => ({ sourceAccountId: d.accountId, percentage: d.pct }))
+    ? acctFormDerivations.value.filter(d => d.pct > 0).map(d => ({ sourceAccountId: d.accountUuid, percentage: d.pct }))
     : []
   let accountId: number
+  let accountUuid: string
   if (editingAccount.value) {
     const a = editingAccount.value
     a.name = acctFormName.value.trim()
@@ -259,6 +263,7 @@ async function saveAccount() {
       await financeStore.save(stored as any)
     }
     accountId = a.id
+    accountUuid = a.uuid
   } else {
     const saved = await financeStore.save({
       name: acctFormName.value.trim(),
@@ -266,8 +271,10 @@ async function saveAccount() {
       type: 'spendable',
     } as any)
     accountId = saved.id!
+    accountUuid = saved.uuid
     accounts.value.push({
       id: accountId,
+      uuid: accountUuid,
       name: saved.name,
       balance: (saved as any).balance,
       prevBalance: (saved as any).balance,
@@ -277,6 +284,7 @@ async function saveAccount() {
       derivations,
     })
   }
+
   const now = new Date().toISOString()
   if (derivations.length > 0) {
     const existingRules = await db.auto_percent_rules.where('target_account_id').equals(accountId).toArray()
@@ -286,7 +294,7 @@ async function saveAccount() {
     for (const d of derivations) {
       await db.auto_percent_rules.put({
         uuid: uuidv4(), created_at: now, updated_at: now, sync_status: 'pending',
-        target_account_id: accountId, percentage: d.percentage, is_active: true,
+        target_account_id: accountId,source_account_id: accountUuid, percentage: d.percentage, is_active: true,
       })
     }
   }
@@ -342,7 +350,7 @@ function getDerivedAccounts() {
   const result: { account: AccountCard; pct: number; amount: number }[] = []
   for (const acct of accounts.value) {
     for (const d of acct.derivations) {
-      if (d.sourceAccountId === sourceAcct.id && d.percentage > 0) {
+      if (d.sourceAccountId === sourceAcct.uuid && d.percentage > 0) {
         result.push({
           account: acct,
           pct: d.percentage,
@@ -566,10 +574,10 @@ onMounted(async () => {
           <div class="ff-deriv-list">
             <div
               v-for="item in acctFormDerivations"
-              :key="item.accountId"
+              :key="item.accountUuid"
               class="ff-deriv-row"
             >
-              <span class="ff-deriv-name" :style="{ color: accounts.find(a => a.id === item.accountId)?.color }">{{ item.name }}</span>
+              <span class="ff-deriv-name" :style="{ color: accounts.find(a => a.uuid === item.accountUuid)?.color }">{{ item.name }}</span>
               <div class="ff-deriv-controls">
                 <input v-model.number="item.pct" type="number" class="ff-input deriv-pct-input" min="0" max="100" />
                 <span class="ff-dist-pct">%</span>

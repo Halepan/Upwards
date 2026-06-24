@@ -7,6 +7,7 @@ export type AccountType = 'spendable' | 'savings' | 'investment' | 'donation'
 
 export class Account extends BaseEntity {
   private _userId: number
+  private _userUuid: string
   private _name: string
   private _type: AccountType
   private _balance: number
@@ -17,18 +18,21 @@ export class Account extends BaseEntity {
     createdAt: string,
     updatedAt: string,
     userId: number,
+    userUuid: string,
     name: string,
     type: AccountType,
     balance: number = 0
   ) {
     super(id, uuid, createdAt, updatedAt)
     this._userId = userId
+    this._userUuid = userUuid
     this._name = name
     this._type = type
     this._balance = balance
   }
 
   get userId(): number { return this._userId }
+  get userUuid(): string { return this._userUuid }
   get name(): string { return this._name }
   get type(): AccountType { return this._type }
   get balance(): number { return this._balance }
@@ -59,14 +63,8 @@ export class Account extends BaseEntity {
 
   static fromDB(data: any): Account {
     return new Account(
-      data.id,
-      data.uuid,
-      data.created_at,
-      data.updated_at,
-      data.user_id,
-      data.name,
-      data.type as AccountType,
-      data.balance
+      data.id, data.uuid, data.created_at, data.updated_at,
+      data.user_id, data.user_uuid, data.name, data.type as AccountType, data.balance
     )
   }
 
@@ -75,6 +73,7 @@ export class Account extends BaseEntity {
       id: this._id,
       uuid: this._uuid,
       user_id: this._userId,
+      user_uuid: this._userUuid,
       name: this._name,
       type: this._type,
       balance: this._balance,

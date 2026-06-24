@@ -4,6 +4,7 @@ import { BaseEntity } from './base_entity'
 
 export class BodyMeasurement extends BaseEntity {
   private _userId: number
+  private _userUuid: string
   private _date: string           // YYYY-MM-DD
   private _weightKg?: number
   private _bodyFatPercent?: number
@@ -18,6 +19,7 @@ export class BodyMeasurement extends BaseEntity {
     createdAt: string,
     updatedAt: string,
     userId: number,
+    userUuid: string,
     date: string,
     weightKg?: number,
     bodyFatPercent?: number,
@@ -28,6 +30,7 @@ export class BodyMeasurement extends BaseEntity {
   ) {
     super(id, uuid, createdAt, updatedAt)
     this._userId = userId
+    this._userUuid = userUuid
     this._date = date
     this._weightKg = weightKg
     this._bodyFatPercent = bodyFatPercent
@@ -39,6 +42,7 @@ export class BodyMeasurement extends BaseEntity {
 
   // Getters
   get userId(): number { return this._userId }
+  get userUuid(): string { return this._userUuid }
   get date(): string { return this._date }
   get weightKg(): number | undefined { return this._weightKg }
   get bodyFatPercent(): number | undefined { return this._bodyFatPercent }
@@ -109,6 +113,7 @@ export class BodyMeasurement extends BaseEntity {
       data.created_at,
       data.updated_at,
       data.user_id,
+      data.user_uuid,
       data.date,
       data.weight_kg,
       data.body_fat_percent,
@@ -124,6 +129,7 @@ export class BodyMeasurement extends BaseEntity {
       id: this._id,
       uuid: this._uuid,
       user_id: this._userId,
+      user_uuid: this._userUuid,
       date: this._date,
       weight_kg: this._weightKg,
       body_fat_percent: this._bodyFatPercent,

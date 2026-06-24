@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid'
 /* DTO para crear una rutina nueva. */
 export interface RoutineDTO {
   userId: number
+  userUuid?: string
   name: string
   description?: string
 }
@@ -18,6 +19,7 @@ export interface RoutineDTO {
 /* DTO para registrar el detalle de un ejercicio dentro de un entrenamiento. */
 export interface LogDetailDTO {
   exerciseId: number
+  exerciseUuid?: string
   repsDone: number
 }
 
@@ -53,23 +55,23 @@ export class RoutineService {
     const now = new Date().toISOString()
     const routine = new Routine(
       undefined, uuidv4(), now, now,
-      userId, data.name, data.description
+      userId, data.userUuid || '', data.name, data.description
     )
     return this.routineRepo.save(routine)
   }
 
-  async logWorkout(routineId: number, date: string, details: LogDetailDTO[]): Promise<RoutineLog> {
+  async logWorkout(routineId: number, routineUuid: string, date: string, details: LogDetailDTO[]): Promise<RoutineLog> {
     const now = new Date().toISOString()
     const log = new RoutineLog(
       undefined, uuidv4(), now, now,
-      routineId, date, undefined, true
+      routineId, routineUuid, date, undefined, true
     )
     const savedLog = await this.routineLogRepo.save(log)
 
     for (const detail of details) {
       const logDetail = new RoutineLogDetail(
         undefined, uuidv4(), now, now,
-        savedLog.id!, detail.exerciseId, detail.repsDone
+        savedLog.id!, savedLog.uuid, detail.exerciseId, detail.exerciseUuid || '', detail.repsDone
       )
       await this.routineLogDetailRepo.save(logDetail)
     }

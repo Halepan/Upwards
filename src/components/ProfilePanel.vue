@@ -93,6 +93,14 @@ async function executeDelete() {
     if (error) console.warn('[Profile] Failed to delete remote user:', error.message)
   }
   await userRepo.delete(userId!)
+  const tables = [
+    db.users, db.accounts, db.income_entries, db.expense_entries,
+    db.auto_percent_rules, db.habits, db.habit_logs, db.weeks,
+    db.habit_week_plans, db.exercises, db.routines, db.routine_exercises,
+    db.routine_logs, db.routine_log_details, db.body_measurements,
+    db.biometric_metrics, db.sync_queue,
+  ]
+  await Promise.all(tables.map(t => t.clear()))
   auth.logout()
   showDeleteConfirm.value = false
 }
