@@ -18,7 +18,7 @@ let syncInterval: ReturnType<typeof setInterval> | null = null
 
 function startSync() {
   if (!auth.currentUser?.id) return
-  syncEngine = new SyncEngine(auth.currentUser.id)
+  syncEngine = new SyncEngine(auth.currentUser.uuid)
   syncEngine.processQueue()
   if (navigator.onLine) {
     syncEngine.pullRemoteChanges()
