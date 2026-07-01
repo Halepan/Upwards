@@ -98,11 +98,10 @@ export class SyncEngine implements ISyncEngine {
     const tablesToSync = Object.keys(TABLE_MAPPING)
     for (const localTable of tablesToSync) {
       const remoteTable = TABLE_MAPPING[localTable]
-      // ⚠️ Usa la columna correspondiente: si es 'user_uuid', cámbiala
       const { data: remoteRecords, error } = await supabase
         .from(remoteTable)
         .select('*')
-        .eq('user_id', this.userUuid)   // Ahora es UUID
+        .eq('user_id', this.userUuid) 
 
       if (error) {
         console.error(`Error pulling ${remoteTable}:`, error.message)

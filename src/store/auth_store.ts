@@ -1,14 +1,11 @@
+// auth_store.ts
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { v4 as uuidv4 } from 'uuid'
 import { db } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { User } from '../domain/user'
 import { UserRepository } from '../repository/user_repository'
 
-/* Store de autenticación con Pinia.
-   Gestiona el ciclo de vida del usuario: login local/remoto, registro
-   con validación de unicidad, y estado de sesión. */
 export const useAuthStore = defineStore('auth', () => {
   const userRepo = new UserRepository(db.users)
 
@@ -17,50 +14,82 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
-  /* Intenta iniciar sesión: primero busca en Dexie local,
-     si hay conexión también valida contra Supabase Auth. */
+  // ================================================================
+  // LOGIN
+  // ================================================================
   async function login(email: string, password: string): Promise<boolean> {
+    let idusernum : number = 0 
     isLoading.value = true
     error.value = null
-
     try {
-      const localUser = await userRepo.findByEmail(email)
+      let localUser = await userRepo.findByEmail(email)
+      if (!navigator.onLine && !localUser) {
+        error.value = 'auth.error.noConnection'
+        return false
+      }else if(!navigator.onLine && localUser) {
+        currentUser.value = localUser
+        isAuthenticated.value = true
+        return true 
+      }
 
-      if (!localUser) {
+      if (localUser && localUser.id) idusernum = localUser.id
+
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (authError) {
+        if (idusernum) userRepo.delete(idusernum)
         error.value = 'auth.error.invalidCredentials'
         return false
       }
 
-      if (localUser.authMethod === 'email') {
-        currentUser.value = localUser
-        isAuthenticated.value = true
-
-        if (navigator.onLine) {
-          const { error: authError } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          })
-          if (authError) {
-            console.warn('[Auth] Supabase login failed:', authError.message)
-          }
-        }
-
-        return true
+      // Validar que el email esté confirmado
+      if (!data.user?.email_confirmed_at) {
+        error.value = 'auth.error.emailNotConfirmed'
+        return false
       }
 
-      error.value = 'auth.error.invalidCredentials'
-      return false
+      const supabaseUuid = data.user.id
+      if (!supabaseUuid) {
+        error.value = 'auth.error.invalidCredentials'
+        return false
+      }
+
+      localUser = await userRepo.findByUuid(supabaseUuid)
+      
+      //crear usuario local si no existe 
+      if (!localUser) {
+        const name = data.user?.user_metadata?.name || email.split('@')[0]
+        const now = new Date().toISOString()
+        localUser = new User(
+          undefined,
+          supabaseUuid,
+          now,
+          now,
+          name,
+          email,
+          'email',
+          undefined
+        )
+        await userRepo.save(localUser)
+      }
+
+      currentUser.value = localUser
+      isAuthenticated.value = true
+      return true
     } catch (cause) {
-      error.value = 'auth.error.generic'
+      console.error('[Auth] Error en login:', cause)
       return false
     } finally {
       isLoading.value = false
     }
   }
 
-  /* Registra un nuevo usuario: valida unicidad local + remota,
-     crea la entidad User y la persiste en Dexie,
-     y si hay conexión también crea la cuenta en Supabase Auth. */
+  // ================================================================
+  // REGISTER (NO hace login automático)
+  // ================================================================
   async function register(
     name: string,
     email: string,
@@ -70,6 +99,7 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
 
     try {
+      // Validaciones locales
       const localNameExists = await userRepo.nameExists(name)
       if (localNameExists) {
         error.value = 'auth.username.taken'
@@ -82,35 +112,54 @@ export const useAuthStore = defineStore('auth', () => {
         return false
       }
 
-      if (navigator.onLine) {
-        const remoteNameExists = await checkRemoteNameExists(name)
-        if (remoteNameExists) {
-          error.value = 'auth.username.taken'
-          return false
-        }
-
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { name } },
-        })
-        if (signUpError) {
-          error.value = 'auth.error.generic'
-          return false
-        }
+      if (!navigator.onLine) {
+        error.value = 'auth.error.noConnection'
+        return false
       }
 
+      const remoteNameExists = await checkRemoteNameExists(name)
+      if (remoteNameExists) {
+        error.value = 'auth.username.taken'
+        return false
+      }
+
+      // Crear usuario en Supabase Auth
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { name } },
+      })
+      if (signUpError) {
+        error.value = signUpError.message || 'auth.error.generic'
+        return false
+      }
+
+      const supabaseUuid = data.user?.id
+      if (!supabaseUuid) {
+        error.value = 'auth.error.noUuid'
+        return false
+      }
+
+      // Guardar usuario en Dexie (local) pero NO hacer login
       const now = new Date().toISOString()
       const user = new User(
-        undefined, uuidv4(), now, now,
-        name, email, 'email', undefined
+        undefined,
+        supabaseUuid,
+        now,
+        now,
+        name,
+        email,
+        'email',
+        undefined
       )
-      const saved = await userRepo.save(user)
+      await userRepo.save(user)
 
-      currentUser.value = saved
-      isAuthenticated.value = true
+      // ⚠️ NO establecemos currentUser ni isAuthenticated
+      // El usuario debe confirmar el email antes de poder iniciar sesión
+
       return true
     } catch (cause) {
+      console.error('[Auth] Error en registro:', cause)
       error.value = 'auth.error.generic'
       return false
     } finally {
@@ -118,12 +167,14 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  /* Verifica si un nombre de usuario ya existe en Supabase. */
+  // ================================================================
+  // VERIFICAR NOMBRE REMOTO
+  // ================================================================
   async function checkRemoteNameExists(name: string): Promise<boolean> {
     try {
       const { data, error: queryError } = await supabase
         .from('users')
-        .select('uuid')
+        .select('id')
         .eq('name', name)
         .maybeSingle()
 
@@ -137,6 +188,9 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // ================================================================
+  // LOGOUT
+  // ================================================================
   function logout(): void {
     currentUser.value = null
     isAuthenticated.value = false

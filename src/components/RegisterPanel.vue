@@ -14,7 +14,6 @@ const { isDark } = useTheme()
 const auth = useAuthStore()
 const userRepo = new UserRepository(db.users)
 
-// Colores reactivos desde theme.config.ts
 const currentColors = computed(() =>
   isDark.value ? themeColors.dark : themeColors.light
 )
@@ -33,6 +32,7 @@ const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 const touched = ref({ username: false, email: false, password: false, confirmPassword: false })
 const checkingUsername = ref(false)
+const registrationSuccess = ref(false)
 
 const usernameError = computed(() => {
   if (!touched.value.username || !username.value) return ''
@@ -80,184 +80,200 @@ async function handleSubmit(): Promise<void> {
   touched.value.confirmPassword = true
   if (!isValid.value) return
 
-  await auth.register(username.value, email.value, password.value)
+  const success = await auth.register(username.value, email.value, password.value)
+  if (success) {
+    registrationSuccess.value = true
+    auth.clearError()
+  }
 }
 
 function onBackToLogin(): void {
   auth.clearError()
+  registrationSuccess.value = false
   emit('switchToLogin')
 }
 </script>
 
 <template>
   <div class="register-panel" :style="{ backgroundColor: surfaceColor, color: textColor }">
-    <h2 class="panel-title" :style="{ color: textColor }">
-      {{ t('auth.register.title') }}
-    </h2>
+    <!-- Pantalla de registro -->
+    <template v-if="!registrationSuccess">
+      <h2 class="panel-title" :style="{ color: textColor }">
+        {{ t('auth.register.title') }}
+      </h2>
 
-    <form class="auth-form" @submit.prevent="handleSubmit" novalidate>
-      <!-- Nombre de usuario -->
-      <div class="field">
-        <label for="reg-username" :style="{ color: textSecondaryColor }">
-          {{ t('auth.username.label') }}
-        </label>
-        <div class="input-wrapper" :class="{ error: usernameError || auth.error === 'auth.username.taken' }" :style="{ borderColor: borderColor, backgroundColor: inputBgColor }">
-          <!-- Icono usuario con círculo amarillo en modo oscuro -->
-          <span class="icon-circle" :style="{ backgroundColor: isDark ? primaryColor : 'transparent' }">
-            <img :src="isDark ? themeIcons.user.dark : themeIcons.user.light" class="input-svg-icon" alt="" />
-          </span>
-          <input
-            id="reg-username"
-            v-model="username"
-            type="text"
-            :placeholder="t('auth.username.placeholder')"
-            autocomplete="username"
-            @blur="validateUsername()"
-            :style="{ color: textColor }"
-          />
-          <span v-if="checkingUsername" class="input-spinner" />
-        </div>
-        <span v-if="usernameError && auth.error !== 'auth.username.taken'" class="field-error">
-          {{ usernameError }}
-        </span>
-        <span v-if="auth.error === 'auth.username.taken'" class="field-error">
-          {{ t('auth.username.taken') }}
-        </span>
-      </div>
-
-      <!-- Email -->
-      <div class="field">
-        <label for="reg-email" :style="{ color: textSecondaryColor }">
-          {{ t('auth.email.label') }}
-        </label>
-        <div class="input-wrapper" :class="{ error: emailError }" :style="{ borderColor: borderColor, backgroundColor: inputBgColor }">
-          <!-- Icono email con círculo amarillo en modo oscuro -->
-          <span class="icon-circle" :style="{ backgroundColor: isDark ? primaryColor : 'transparent' }">
-            <img :src="isDark ? themeIcons.email.dark : themeIcons.email.light" class="input-svg-icon" alt="" />
-          </span>
-          <input
-            id="reg-email"
-            v-model="email"
-            type="email"
-            :placeholder="t('auth.email.placeholder')"
-            autocomplete="email"
-            @blur="touched.email = true"
-            :style="{ color: textColor }"
-          />
-        </div>
-        <span v-if="emailError" class="field-error">{{ emailError }}</span>
-      </div>
-
-      <!-- Contraseña -->
-      <div class="field">
-        <label for="reg-password" :style="{ color: textSecondaryColor }">
-          {{ t('auth.password.label') }}
-        </label>
-        <div class="input-wrapper" :class="{ error: passwordError }" :style="{ borderColor: borderColor, backgroundColor: inputBgColor }">
-          <!-- Icono candado con círculo amarillo en modo oscuro -->
-          <span class="icon-circle" :style="{ backgroundColor: isDark ? primaryColor : 'transparent' }">
-            <img :src="isDark ? themeIcons.lock.dark : themeIcons.lock.light" class="input-svg-icon" alt="" />
-          </span>
-          <input
-            id="reg-password"
-            v-model="password"
-            :type="showPassword ? 'text' : 'password'"
-            :placeholder="t('auth.password.placeholder')"
-            autocomplete="new-password"
-            @blur="touched.password = true"
-            :style="{ color: textColor }"
-          />
-          <button
-            type="button"
-            class="toggle-password"
-            @click="showPassword = !showPassword"
-            :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-            tabindex="-1"
-          >
-            <!-- Icono ojo con círculo amarillo en modo oscuro -->
+      <form class="auth-form" @submit.prevent="handleSubmit" novalidate>
+        <!-- Campos del formulario (sin cambios) -->
+        <div class="field">
+          <label for="reg-username" :style="{ color: textSecondaryColor }">
+            {{ t('auth.username.label') }}
+          </label>
+          <div class="input-wrapper" :class="{ error: usernameError || auth.error === 'auth.username.taken' }" :style="{ borderColor: borderColor, backgroundColor: inputBgColor }">
             <span class="icon-circle" :style="{ backgroundColor: isDark ? primaryColor : 'transparent' }">
-              <img
-                :src="showPassword
-                  ? (isDark ? themeIcons.eyeOff.dark : themeIcons.eyeOff.light)
-                  : (isDark ? themeIcons.eyeOn.dark : themeIcons.eyeOn.light)"
-                class="eye-svg-icon"
-                :alt="showPassword ? 'Ocultar' : 'Mostrar'"
-              />
+              <img :src="isDark ? themeIcons.user.dark : themeIcons.user.light" class="input-svg-icon" alt="" />
             </span>
-          </button>
-        </div>
-        <span v-if="passwordError" class="field-error">{{ passwordError }}</span>
-      </div>
-
-      <!-- Confirmar contraseña -->
-      <div class="field">
-        <label for="reg-confirm-password" :style="{ color: textSecondaryColor }">
-          {{ t('auth.password.confirmLabel') }}
-        </label>
-        <div class="input-wrapper" :class="{ error: confirmPasswordError }" :style="{ borderColor: borderColor, backgroundColor: inputBgColor }">
-          <!-- Icono candado con círculo amarillo en modo oscuro -->
-          <span class="icon-circle" :style="{ backgroundColor: isDark ? primaryColor : 'transparent' }">
-            <img :src="isDark ? themeIcons.lock.dark : themeIcons.lock.light" class="input-svg-icon" alt="" />
+            <input
+              id="reg-username"
+              v-model="username"
+              type="text"
+              :placeholder="t('auth.username.placeholder')"
+              autocomplete="username"
+              @blur="validateUsername()"
+              :style="{ color: textColor }"
+            />
+            <span v-if="checkingUsername" class="input-spinner" />
+          </div>
+          <span v-if="usernameError && auth.error !== 'auth.username.taken'" class="field-error">
+            {{ usernameError }}
           </span>
-          <input
-            id="reg-confirm-password"
-            v-model="confirmPassword"
-            :type="showConfirmPassword ? 'text' : 'password'"
-            :placeholder="t('auth.password.confirmPlaceholder')"
-            autocomplete="off"
-            @blur="touched.confirmPassword = true"
-            :style="{ color: textColor }"
-          />
-          <button
-            type="button"
-            class="toggle-password"
-            @click="showConfirmPassword = !showConfirmPassword"
-            :aria-label="showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-            tabindex="-1"
-          >
-            <!-- Icono ojo con círculo amarillo en modo oscuro -->
-            <span class="icon-circle" :style="{ backgroundColor: isDark ? primaryColor : 'transparent' }">
-              <img
-                :src="showConfirmPassword
-                  ? (isDark ? themeIcons.eyeOff.dark : themeIcons.eyeOff.light)
-                  : (isDark ? themeIcons.eyeOn.dark : themeIcons.eyeOn.light)"
-                class="eye-svg-icon"
-                :alt="showConfirmPassword ? 'Ocultar' : 'Mostrar'"
-              />
-            </span>
-          </button>
+          <span v-if="auth.error === 'auth.username.taken'" class="field-error">
+            {{ t('auth.username.taken') }}
+          </span>
         </div>
-        <span v-if="confirmPasswordError" class="field-error">{{ confirmPasswordError }}</span>
-      </div>
 
-      <!-- Error global -->
-      <Transition name="fade">
-        <p v-if="auth.error && auth.error !== 'auth.username.taken'" class="error-global">
-          {{ t(auth.error) }}
+        <div class="field">
+          <label for="reg-email" :style="{ color: textSecondaryColor }">
+            {{ t('auth.email.label') }}
+          </label>
+          <div class="input-wrapper" :class="{ error: emailError }" :style="{ borderColor: borderColor, backgroundColor: inputBgColor }">
+            <span class="icon-circle" :style="{ backgroundColor: isDark ? primaryColor : 'transparent' }">
+              <img :src="isDark ? themeIcons.email.dark : themeIcons.email.light" class="input-svg-icon" alt="" />
+            </span>
+            <input
+              id="reg-email"
+              v-model="email"
+              type="email"
+              :placeholder="t('auth.email.placeholder')"
+              autocomplete="email"
+              @blur="touched.email = true"
+              :style="{ color: textColor }"
+            />
+          </div>
+          <span v-if="emailError" class="field-error">{{ emailError }}</span>
+        </div>
+
+        <div class="field">
+          <label for="reg-password" :style="{ color: textSecondaryColor }">
+            {{ t('auth.password.label') }}
+          </label>
+          <div class="input-wrapper" :class="{ error: passwordError }" :style="{ borderColor: borderColor, backgroundColor: inputBgColor }">
+            <span class="icon-circle" :style="{ backgroundColor: isDark ? primaryColor : 'transparent' }">
+              <img :src="isDark ? themeIcons.lock.dark : themeIcons.lock.light" class="input-svg-icon" alt="" />
+            </span>
+            <input
+              id="reg-password"
+              v-model="password"
+              :type="showPassword ? 'text' : 'password'"
+              :placeholder="t('auth.password.placeholder')"
+              autocomplete="new-password"
+              @blur="touched.password = true"
+              :style="{ color: textColor }"
+            />
+            <button
+              type="button"
+              class="toggle-password"
+              @click="showPassword = !showPassword"
+              :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              tabindex="-1"
+            >
+              <span class="icon-circle" :style="{ backgroundColor: isDark ? primaryColor : 'transparent' }">
+                <img
+                  :src="showPassword
+                    ? (isDark ? themeIcons.eyeOff.dark : themeIcons.eyeOff.light)
+                    : (isDark ? themeIcons.eyeOn.dark : themeIcons.eyeOn.light)"
+                  class="eye-svg-icon"
+                  :alt="showPassword ? 'Ocultar' : 'Mostrar'"
+                />
+              </span>
+            </button>
+          </div>
+          <span v-if="passwordError" class="field-error">{{ passwordError }}</span>
+        </div>
+
+        <div class="field">
+          <label for="reg-confirm-password" :style="{ color: textSecondaryColor }">
+            {{ t('auth.password.confirmLabel') }}
+          </label>
+          <div class="input-wrapper" :class="{ error: confirmPasswordError }" :style="{ borderColor: borderColor, backgroundColor: inputBgColor }">
+            <span class="icon-circle" :style="{ backgroundColor: isDark ? primaryColor : 'transparent' }">
+              <img :src="isDark ? themeIcons.lock.dark : themeIcons.lock.light" class="input-svg-icon" alt="" />
+            </span>
+            <input
+              id="reg-confirm-password"
+              v-model="confirmPassword"
+              :type="showConfirmPassword ? 'text' : 'password'"
+              :placeholder="t('auth.password.confirmPlaceholder')"
+              autocomplete="off"
+              @blur="touched.confirmPassword = true"
+              :style="{ color: textColor }"
+            />
+            <button
+              type="button"
+              class="toggle-password"
+              @click="showConfirmPassword = !showConfirmPassword"
+              :aria-label="showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              tabindex="-1"
+            >
+              <span class="icon-circle" :style="{ backgroundColor: isDark ? primaryColor : 'transparent' }">
+                <img
+                  :src="showConfirmPassword
+                    ? (isDark ? themeIcons.eyeOff.dark : themeIcons.eyeOff.light)
+                    : (isDark ? themeIcons.eyeOn.dark : themeIcons.eyeOn.light)"
+                  class="eye-svg-icon"
+                  :alt="showConfirmPassword ? 'Ocultar' : 'Mostrar'"
+                />
+              </span>
+            </button>
+          </div>
+          <span v-if="confirmPasswordError" class="field-error">{{ confirmPasswordError }}</span>
+        </div>
+
+        <!-- Error global -->
+        <Transition name="fade">
+          <p v-if="auth.error && auth.error !== 'auth.username.taken'" class="error-global">
+            {{ t(auth.error) }}
+          </p>
+        </Transition>
+
+        <button
+          type="submit"
+          class="btn-primary"
+          :disabled="auth.isLoading || !isValid || checkingUsername"
+          :style="{ backgroundColor: primaryColor }"
+        >
+          {{ auth.isLoading ? t('auth.loading') : t('auth.register.button') }}
+        </button>
+      </form>
+
+      <p class="switch-link" :style="{ color: textSecondaryColor }">
+        {{ t('auth.register.hasAccount') }}
+        <button class="link" @click="onBackToLogin" :style="{ color: primaryColor }">
+          {{ t('auth.register.loginLink') }}
+        </button>
+      </p>
+    </template>
+
+    <!-- ✅ Pantalla de éxito (sin botón de redirección, solo mensaje claro) -->
+    <template v-else>
+      <div class="success-container">
+        <h2 class="panel-title" :style="{ color: textColor }">
+          ✅ ¡Registro exitoso!
+        </h2>
+        <p class="success-message" :style="{ color: textSecondaryColor }">
+          <strong>Se ha enviado un correo de confirmación</strong> a tu dirección <strong>{{ email }}</strong>.
         </p>
-      </Transition>
-
-      <!-- Botón -->
-      <button
-        type="submit"
-        class="btn-primary"
-        :disabled="auth.isLoading || !isValid || checkingUsername"
-        :style="{ backgroundColor: primaryColor }"
-      >
-        {{ auth.isLoading ? t('auth.loading') : t('auth.register.button') }}
-      </button>
-    </form>
-
-    <p class="switch-link" :style="{ color: textSecondaryColor }">
-      {{ t('auth.register.hasAccount') }}
-      <button class="link" @click="onBackToLogin" :style="{ color: primaryColor }">
-        {{ t('auth.register.loginLink') }}
-      </button>
-    </p>
+        <p class="success-instruction" :style="{ color: textSecondaryColor }">
+          Revisa tu correo electronico en la bandeja de entrada (y la carpeta de spam) y haz clic en el enlace para activar tu cuenta.
+          <br><br>
+          Después de confirmar, <strong>inicia sesión</strong> desde la pantalla de inicio.
+        </p>
+      </div>
+    </template>
   </div>
 </template>
 
 <style scoped>
+/* Estilos sin cambios (ya están definidos) */
 .register-panel {
   width: 100%;
   max-width: 400px;
@@ -315,7 +331,6 @@ function onBackToLogin(): void {
   box-shadow: 0 0 0 3px rgba(229, 57, 53, 0.2);
 }
 
-/* Círculo de fondo para iconos (amarillo en modo oscuro, transparente en claro) */
 .icon-circle {
   width: 28px;
   height: 28px;
@@ -445,5 +460,26 @@ function onBackToLogin(): void {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* ✅ Pantalla de éxito */
+.success-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.success-message {
+  font-size: 16px;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.success-instruction {
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.6;
 }
 </style>
