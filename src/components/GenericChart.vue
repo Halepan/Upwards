@@ -77,7 +77,7 @@ const chartOptions = computed(() => {
   let min: Date, max: Date
   let unit: 'day' | 'week' | 'month'
   let displayFormats: Record<string, string>
-
+  console.log("start")
   switch (props.viewMode) {
     case 'diario':
       min = new Date(now.getFullYear(), now.getMonth() - 1, 1)

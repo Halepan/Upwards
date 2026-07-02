@@ -191,7 +191,7 @@ export class UpwardsDB extends Dexie {
     this.version(2).stores({
       users: '++id, &uuid, email, sync_status',
       accounts: '++id, &uuid, user_id, user_uuid, type, sync_status',
-      income_entries: '++id, &uuid, user_id, user_uuid, date, sync_status',
+      income_entries: '++id, &uuid, account_id, account_uuid, date, sync_status',
       expense_entries: '++id, &uuid, account_id, account_uuid, date, sync_status',
       auto_percent_rules: '++id, &uuid, target_account_id, target_account_uuid, sync_status',
       habits: '++id, &uuid, user_id, user_uuid, sync_status',

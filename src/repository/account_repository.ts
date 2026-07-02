@@ -17,6 +17,10 @@ export class AccountRepository extends BaseDexieRepository<AccountData, Account>
   }
 
   async findByUserId(user_id: number): Promise<Account[]> {
+    if (user_id === undefined || user_id === null || isNaN(user_id)) {
+      console.warn('[AccountRepository] findByUserId called with invalid userId:', user_id);
+      return []; 
+  }
     const data = await this.table.where('user_id').equals(user_id).toArray()
     return data.map(account => this.fromDB(account))
   }

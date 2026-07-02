@@ -50,9 +50,33 @@ const emit = defineEmits<{
   'close-history': []
 }>()
 
-const accounts = ref<AccountCard[]>([])
+function getColorFromUuid(uuid: string): string {
+  // Sumar los códigos de caracteres para obtener un número
+  let hash = 0
+  for (let i = 0; i < uuid.length; i++) {
+    hash = uuid.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  // Asegurar que sea positivo y dentro del rango de la paleta
+  const index = Math.abs(hash) % accountColors.length
+  return accountColors[index]
+}
 
-function initAccounts() {
+// En FinancePage.vue
+const accounts = computed<AccountCard[]>(() =>
+  financeStore.items.map((a: any) => ({
+    id: a.id!,
+    uuid: a.uuid,
+    name: a.name,
+    balance: a.balance,
+    prevBalance: a.balance,
+    color: getColorFromUuid(a.uuid),
+    spent: 0,
+    trend: 'flat' as Trend,
+    derivations: [],
+  }))
+)
+
+/*function initAccounts() {
   accounts.value = financeStore.items.length > 0
     ? financeStore.items.map((a: any) => ({
         id: a.id!,
@@ -66,7 +90,7 @@ function initAccounts() {
         derivations: [],
       }))
     : []
-}
+}*/
 
 const budgetAlert = computed(() => {
   for (const acct of accounts.value) {
@@ -181,13 +205,66 @@ const segments = computed(() => {
 
 const { isDark } = useTheme()
 
-const financeSeries = computed<ChartSeries[]>(() =>
-  accounts.value.map(acct => ({
-    label: acct.name,
-    data: [],
-    color: acct.color,
-  }))
-)
+// En FinancePage.vue
+const financeSeries = computed<ChartSeries[]>(() => {
+  // 1. Obtener todas las cuentas
+  /*const accountsMap = accounts.value.reduce((acc, acct) => {
+    acc[acct.id] = acct
+   return acc
+  }, {} as Record<number, AccountCard>)*/
+
+  // 2. Preparar un mapa de series por cuenta
+  const seriesMap: Record<number, { label: string; color: string; dataMap: Map<string, number> }> = {}
+
+  // 3. Inicializar series para cada cuenta
+  for (const acct of accounts.value) {
+    seriesMap[acct.id] = {
+      label: acct.name,
+      color: acct.color,
+      dataMap: new Map(),
+    }
+  }
+
+  // 4. Agregar gastos (negativos) a sus cuentas
+  for (const exp of financeStore.expenses.value) {
+    const accountId = exp.accountId
+    if (!seriesMap[accountId]) continue
+    const dateStr = exp.date // YYYY-MM-DD
+    const current = seriesMap[accountId].dataMap.get(dateStr) || 0
+    seriesMap[accountId].dataMap.set(dateStr, current - exp.amount)
+  }
+
+  // 5. Agregar ingresos (positivos) a sus cuentas
+  for (const inc of financeStore.incomes.value) {
+    const accountId = inc.accountId
+    if (!seriesMap[accountId]) continue
+    const dateStr = inc.date
+    const current = seriesMap[accountId].dataMap.get(dateStr) || 0
+    seriesMap[accountId].dataMap.set(dateStr, current + inc.amount)
+  }
+
+  // 6. Convertir a formato ChartSeries
+  const result: ChartSeries[] = []
+  for (const accountId of Object.keys(seriesMap)) {
+    const { label, color, dataMap } = seriesMap[Number(accountId)]
+    // Ordenar por fecha
+    const sortedDates = Array.from(dataMap.keys()).sort()
+    const data = sortedDates.map(dateStr => ({
+      x: new Date(dateStr),
+      y: dataMap.get(dateStr) || 0,
+    }))
+    // Si no hay datos, mostrar un punto en el día actual con balance actual
+    if (data.length === 0) {
+      const acct = accounts.value.find(a => a.id === Number(accountId))
+      if (acct) {
+        data.push({ x: new Date(), y: acct.balance })
+      }
+    }
+    result.push({ label, data, color })
+  }
+
+  return result
+})
 
 const {
   contextVisible, contextItems, contextX, contextY,
@@ -293,7 +370,7 @@ async function saveAccount() {
     accountUuid = saved.uuid // UUID de Supabase
 
     // Actualizar la lista local de cuentas (para la UI)
-    accounts.value.push({
+    /*accounts.value.push({
       id: accountId,
       uuid: accountUuid,
       name: saved.name,
@@ -303,7 +380,7 @@ async function saveAccount() {
       spent: 0,
       trend: 'flat',
       derivations,
-    })
+    })*/
   }
 
   // ============================================================
@@ -352,7 +429,6 @@ function onLongPressAccount(acct: AccountCard, event: MouseEvent | TouchEvent): 
 
 async function deleteAccount(acct: AccountCard): Promise<void> {
   await financeStore.deleteAccount(acct.id)
-  accounts.value = accounts.value.filter(a => a.id !== acct.id)
 }
 
 // ---------- Transaction dialog state ----------
@@ -481,7 +557,6 @@ function formatCurrency(n: number): string {
 
 onMounted(async () => {
   await financeStore.loadAll(currentUser.value!.id!)
-  initAccounts()
   initHistory()
 })
 </script>
@@ -627,9 +702,9 @@ onMounted(async () => {
               </div>
             </div>
           </div>
-        </div>
+       </div>
 
-        <label class="ff-field">
+       <!-- <label class="ff-field">
           <span class="ff-label">Color</span>
           <div class="ff-colors">
             <button
@@ -641,7 +716,7 @@ onMounted(async () => {
               @click="acctFormColor = c"
             />
           </div>
-        </label>
+        </label>-->
 
         <div class="ff-actions">
           <button class="ff-btn cancel" @click="editPanel = false; editingAccount = null">Cancelar</button>
