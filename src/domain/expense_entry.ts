@@ -85,6 +85,19 @@ export class ExpenseEntry extends BaseEntity {
       created_at: this._createdAt,
       updated_at: this._updatedAt,
       sync_status: 'pending'
+    }}
+
+    toSupabase(): any {
+    return {
+      id: this._uuid,
+      account_id: this._accountUuid,
+      amount: this._amount,
+      category: this._category,
+      note: this._note,
+      date: this._date,
+      created_at: this._createdAt,
+      updated_at: this._updatedAt,
     }
   }
 }
+  

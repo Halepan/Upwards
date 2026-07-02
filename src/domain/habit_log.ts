@@ -89,4 +89,16 @@ export class HabitLog extends BaseEntity {
       sync_status: 'pending'
     }
   }
+
+  toSupabase(): any {
+    return {
+      id: this._uuid,
+      habit_id: this._habitUuid,
+      date: this._date,
+      status: this._status,
+      completed_at: this._completedAt,
+      created_at: this._createdAt,
+      updated_at: this._updatedAt,
+    }
+  }
 }

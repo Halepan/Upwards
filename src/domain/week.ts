@@ -66,16 +66,25 @@ export class Week extends BaseEntity {
 
   toDB(): any {
     return {
-      id: this._id,
-      uuid: this._uuid,
-      user_id: this._userId,
-      user_uuid: this._userUuid,
+      id: this._uuid,
+      user_id: this._userUuid,
       start_date: this._startDate,
       end_date: this._endDate,
       notes: this._notes,
       created_at: this._createdAt,
       updated_at: this._updatedAt,
-      sync_status: 'pending'
+    }
+  }
+
+  toSupabase(): any {
+    return {
+      id: this._uuid,
+      user_id: this._userUuid,
+      start_date: this._startDate,
+      end_date: this._endDate,
+      notes: this._notes,
+      created_at: this._createdAt,
+      updated_at: this._updatedAt,
     }
   }
 }

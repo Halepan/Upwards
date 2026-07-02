@@ -89,4 +89,16 @@ export class IncomeEntry extends BaseEntity {
       sync_status: 'pending'
     }
   }
+  toSupabase(): any {
+    return {
+      id: this._uuid,
+      account_id: this._accountUuid,    // ✅
+      amount: this._amount,
+      classification: this._classification,
+      note: this._note,
+      date: this._date,
+      created_at: this._createdAt,
+      updated_at: this._updatedAt,
+    }
+  }
 }

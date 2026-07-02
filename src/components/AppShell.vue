@@ -6,7 +6,6 @@ import { themeIcons, themeColors } from '../config/theme.config'
 import ProfilePanel from './ProfilePanel.vue'
 import SettingsPanel from './SettingsPanel.vue'
 import { useAuthStore } from '../store/auth_store'
-
 export type Section = 'finanzas' | 'habitos' | 'fitness'
 
 const props = defineProps<{

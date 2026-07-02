@@ -91,4 +91,15 @@ export class HabitWeekPlan extends BaseEntity {
       sync_status: 'pending'
     }
   }
+
+  toSupabase(): any {
+    return {
+      id: this._uuid,
+      habit_id: this._habitUuid,
+      week_id: this._weekUuid,
+      planned_days: this._plannedDays,
+      created_at: this._createdAt,
+      updated_at: this._updatedAt,
+    }
+  }  
 }

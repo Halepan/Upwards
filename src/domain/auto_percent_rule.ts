@@ -86,4 +86,15 @@ export class AutoPercentRule extends BaseEntity {
       sync_status: 'pending'
     }
   }
+  toSupabase(): any {
+    return {
+      id: this._uuid,
+      source_account_id: this._sourceAccountId,
+      target_account_id: this._targetAccountUuid,
+      percentage: this._percentage,
+      is_active: this._isActive,
+      created_at: this._createdAt,
+      updated_at: this._updatedAt
+    }
+  }
 }

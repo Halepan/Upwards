@@ -142,4 +142,20 @@ export class BodyMeasurement extends BaseEntity {
       sync_status: 'pending'
     }
   }
+
+  toSupabase(): any {
+    return {
+      id: this._uuid,
+      user_id: this._userUuid,
+      date: this._date,
+      weight_kg: this._weightKg,
+      body_fat_percent: this._bodyFatPercent,
+      height_cm: this._heightCm,
+      chest_cm: this._chestCm,
+      waist_cm: this._waistCm,
+      thigh_cm: this._thighCm,
+      created_at: this._createdAt,
+      updated_at: this._updatedAt,
+    }
+  }
 }

@@ -119,4 +119,19 @@ export class Habit extends BaseEntity {
       sync_status: 'pending'
     }
   }
+
+  toSupabase(): any {
+    return {
+      id: this._uuid,
+      user_id: this._userUuid,
+      name: this._name,
+      description: this._description,
+      frequency_goal: this._frequencyGoal,
+      color: this._color,
+      icon: this._icon,
+      is_archived: this._isArchived,
+      created_at: this._createdAt,
+      updated_at: this._updatedAt,
+    }
+  }
 }

@@ -81,4 +81,16 @@ export class RoutineLog extends BaseEntity {
       sync_status: 'pending'
     }
   }
+
+  toSupabase(): any {
+    return {
+      id: this._uuid,
+      routine_id: this._routineUuid,
+      date: this._date,
+      notes: this._notes,
+      completed: this._completed,
+      created_at: this._createdAt,
+      updated_at: this._updatedAt,
+    }
+  }
 }

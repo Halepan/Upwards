@@ -61,19 +61,17 @@ export class FinanceStore extends BaseStore<Account> {
   // Transacciones
   // ----------------------------------------------------------------
   async addIncome(accountId: number, data: Omit<IncomeDTO, 'accountUuid'>): Promise<IncomeEntry> {
-    // Obtener el UUID de la cuenta a partir del ID
     const account = this._items.value.find(a => a.id === accountId)
     if (!account) throw new Error('Cuenta no encontrada en el store local')
 
     const dataWithUuid: IncomeDTO = {
       ...data,
       accountId,
-      accountUuid: account.uuid,   // ✅ UUID real de la cuenta
+      accountUuid: account.uuid,
     }
     const entry = await this.financeService.addIncome(dataWithUuid)
     this.incomes.value.push(entry)
 
-    // Refrescar balance y cuenta
     await this.refreshAccount(accountId)
     await this.refreshBalance(account.userId)
     return entry
@@ -114,8 +112,8 @@ export class FinanceStore extends BaseStore<Account> {
       type,
       balance
     )
-    const saved = await this.repository.save(account)
-    this._items.value.push(saved)
+    // ✅ Usar this.save para encolar automáticamente
+    const saved = await this.save(account)
     return saved
   }
 
@@ -166,16 +164,13 @@ export class FinanceStore extends BaseStore<Account> {
   // Carga y refrescos
   // ----------------------------------------------------------------
   async loadTransactions(userId: number): Promise<void> {
-    // 1. Obtener todas las cuentas del usuario
     const userAccounts = await this.repository.findByUserId(userId)
     const accountIds = userAccounts.map(a => a.id!).filter(id => id !== undefined) as number[]
 
-    // 2. Cargar ingresos de esas cuentas
     const incomes = accountIds.length
       ? await this.incomeRepo.findByAccountIds(accountIds)
       : []
 
-    // 3. Gastos (se mantienen como estaban, pero podrían optimizarse igual)
     const expenses = await this.expenseRepo.findAll()
 
     this.incomes.value = incomes

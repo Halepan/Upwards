@@ -86,4 +86,16 @@ export class User extends BaseEntity {
       sync_status: 'pending'
     }
   }
+
+  toSupabase(): any {
+    return {
+      id: this._uuid,
+      name: this._name,
+      email: this._email,
+      auth_method: this._authMethod,
+      pin_hash: this._pinHash,
+      created_at: this._createdAt,
+      updated_at: this._updatedAt,
+    }
+  }
 }

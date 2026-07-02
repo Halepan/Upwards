@@ -2,6 +2,7 @@
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from './store/auth_store'
 import { SyncEngine } from './sync'
+import { habitStore, financeStore, fitnessStore } from './store' // 👈 Ajusta la ruta
 import AuthView from './components/AuthView.vue'
 import AppShell from './components/AppShell.vue'
 import FinancePage from './components/FinancePage.vue'
@@ -18,11 +19,22 @@ let syncInterval: ReturnType<typeof setInterval> | null = null
 
 function startSync() {
   if (!auth.currentUser?.id) return
-  syncEngine = new SyncEngine(auth.currentUser.uuid)
+
+  // 🔥 Crear SyncEngine con el UUID del usuario
+  syncEngine = new SyncEngine()
+
+  // 🔥 Inyectar SyncEngine en TODOS los stores
+  habitStore.setSyncEngine(syncEngine, 'habits')
+  financeStore.setSyncEngine(syncEngine, 'accounts')
+  fitnessStore.setSyncEngine(syncEngine, 'exercises')
+
+  // Procesar cola y descargar cambios
   syncEngine.processQueue()
   if (navigator.onLine) {
     syncEngine.pullRemoteChanges()
   }
+
+  // Sincronización periódica
   syncInterval = setInterval(() => {
     if (navigator.onLine && syncEngine) {
       syncEngine.processQueue()

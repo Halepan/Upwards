@@ -69,4 +69,14 @@ export class RoutineLogDetail extends BaseEntity {
       sync_status: 'pending'
     }
   }
+  toSupabase(): any {
+    return {
+      id: this._uuid,
+      routine_log_id: this._routineLogUuid,
+      exercise_id: this._exerciseUuid,
+      reps_done: this._repsDone,
+      created_at: this._createdAt,
+      updated_at: this._updatedAt,
+    }
+  }
 }

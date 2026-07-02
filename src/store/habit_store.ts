@@ -49,7 +49,6 @@ export class HabitStore extends BaseStore<Habit> {
     this.counthabitforweek = ref() as Ref<number>  
   }
 
-
   async loadAll(): Promise<void> {
     await this.fetchAll()
     this.allLogs.value = await this.logRepo.findAll()
@@ -60,10 +59,12 @@ export class HabitStore extends BaseStore<Habit> {
       ...data,
       userUuid: useAuthStore().currentUser?.uuid || '',
     }
+    // Crear hábito usando el servicio
     const habit = await this.service.createHabit(dataWithUuid.userId, dataWithUuid)
-    this._items.value.push(habit)
+    // ✅ Usar this.save para encolar automáticamente
+    const saved = await this.save(habit)
     await this.loadWeekPlans()
-    return habit
+    return saved
   }
 
   async markDay(habitId: number, date: string, status: HabitStatus): Promise<void> {
@@ -97,8 +98,7 @@ export class HabitStore extends BaseStore<Habit> {
   }
 
   async deleteHabit(habitId: number): Promise<void> {
-    await this.repository.delete(habitId)
-    this._items.value = this._items.value.filter(h => (h as any).id !== habitId)
+    await this.deleteById(habitId)
     this.allLogs.value = this.allLogs.value.filter(l => l.habitId !== habitId)
     await this.loadWeekPlans()
   }

@@ -1,6 +1,6 @@
 import { ref, type Ref } from 'vue'
 import { db } from '../lib/db'
-import { Exercise } from '../domain/exercise'
+import { Exercise , type ExerciseSubType, type ExerciseType} from '../domain/exercise'
 import { Routine } from '../domain/routine'
 import { RoutineLog } from '../domain/routine_log'
 import type { BodyMeasurement as BMData } from '../lib/db'
@@ -65,6 +65,7 @@ export class FitnessStore extends BaseStore<Exercise> {
     }
     const routine = await this.service.createRoutine(userId, dataWithUuid)
     this.routines.value.push(routine)
+    // TODO: encolar manualmente aquí si se necesita sincronización de routines
     return routine
   }
 
@@ -92,11 +93,25 @@ export class FitnessStore extends BaseStore<Exercise> {
     this.routineLogs.value = await logRepo.findAllByRoutine(routineId)
   }
 
-  async addExercise(userId: number, name: string, type: string, subType?: string): Promise<any> {
+  async addExercise(userId: number, name: string, type: ExerciseType, subType?: ExerciseSubType): Promise<Exercise> {
     const userUuid = useAuthStore().currentUser?.uuid || ''
-    const id = await db.exercises.put({ name, type, sub_type: subType, is_custom: true, user_id: userId, user_uuid: userUuid } as any)
-    await this.fetchAll()
-    return this._items.value.find((e: any) => e.id === id)
+    const now = new Date().toISOString()
+    const exercise = new Exercise(
+      undefined,
+      uuidv4(),
+      now,
+      now,
+      userId,
+      userUuid,
+      name,
+      type as any,
+      subType,
+      '',
+      true
+    )
+    // ✅ Usar this.save para encolar automáticamente
+    const saved = await this.save(exercise)
+    return saved
   }
 
   async deleteExercise(id: number): Promise<void> {

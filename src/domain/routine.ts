@@ -81,4 +81,16 @@ export class Routine extends BaseEntity {
       sync_status: 'pending'
     }
   }
+
+  toSupabase(): any {
+    return {
+      id: this._uuid,
+      user_id: this._userUuid,
+      name: this._name,
+      description: this._description,
+      is_active: this._isActive,
+      created_at: this._createdAt,
+      updated_at: this._updatedAt,
+    }
+  }
 }

@@ -33,4 +33,8 @@ export abstract class BaseEntity {
   public updateTimestamp(): void {
     this._updatedAt = new Date().toISOString()
   }
+
+  toSupabase(): any{
+    return
+  }
 }
