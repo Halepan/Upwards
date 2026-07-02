@@ -20,35 +20,24 @@ import { useAuthStore } from './auth_store'
 import { v4 as uuidv4 } from 'uuid'
 
 export class FinanceStore extends BaseStore<Account> {
-  // ----------------------------------------------------------------
-  // Dependencias (repositorios y servicio)
-  // ----------------------------------------------------------------
   protected repository: AccountRepository
   private financeService: FinanceService
   private incomeRepo: IncomeEntryRepository
   private expenseRepo: ExpenseEntryRepository
   private ruleRepo: AutoPercentRuleRepository
 
-  // ----------------------------------------------------------------
-  // Estado reactivo público
-  // ----------------------------------------------------------------
   incomes: Ref<IncomeEntry[]>
   expenses: Ref<ExpenseEntry[]>
   spendableBalance: Ref<number>
 
-  // ----------------------------------------------------------------
-  // Constructor
-  // ----------------------------------------------------------------
   constructor() {
     super()
 
-    // Inicializar repositorios
     this.repository = new AccountRepository(db.accounts)
     this.incomeRepo = new IncomeEntryRepository(db.income_entries)
     this.expenseRepo = new ExpenseEntryRepository(db.expense_entries)
     this.ruleRepo = new AutoPercentRuleRepository(db.auto_percent_rules)
 
-    // Inicializar servicio de finanzas
     this.financeService = new FinanceService(
       this.repository,
       this.incomeRepo,
@@ -56,33 +45,37 @@ export class FinanceStore extends BaseStore<Account> {
       this.ruleRepo
     )
 
-    // Inicializar estado reactivo
     this.incomes = ref<IncomeEntry[]>([]) as Ref<IncomeEntry[]>
     this.expenses = ref<ExpenseEntry[]>([]) as Ref<ExpenseEntry[]>
     this.spendableBalance = ref(0)
   }
 
-  // ----------------------------------------------------------------
-  // Carga inicial
-  // ----------------------------------------------------------------
   async loadAll(userId: number): Promise<void> {
     await Promise.all([
-      this.fetchAll(),               // Carga todas las cuentas
-      this.loadTransactions(userId), // Carga ingresos y gastos
+      this.fetchAll(),
+      this.loadTransactions(userId),
     ])
   }
 
   // ----------------------------------------------------------------
   // Transacciones
   // ----------------------------------------------------------------
-  async addIncome(userId: number, data: IncomeDTO): Promise<IncomeEntry> {
+  async addIncome(accountId: number, data: Omit<IncomeDTO, 'accountUuid'>): Promise<IncomeEntry> {
+    // Obtener el UUID de la cuenta a partir del ID
+    const account = this._items.value.find(a => a.id === accountId)
+    if (!account) throw new Error('Cuenta no encontrada en el store local')
+
     const dataWithUuid: IncomeDTO = {
       ...data,
-      userUuid: useAuthStore().currentUser?.uuid || '',
+      accountId,
+      accountUuid: account.uuid,   // ✅ UUID real de la cuenta
     }
-    const entry = await this.financeService.addIncome(userId, dataWithUuid)
+    const entry = await this.financeService.addIncome(dataWithUuid)
     this.incomes.value.push(entry)
-    await this.refreshBalance(userId)
+
+    // Refrescar balance y cuenta
+    await this.refreshAccount(accountId)
+    await this.refreshBalance(account.userId)
     return entry
   }
 
@@ -131,12 +124,12 @@ export class FinanceStore extends BaseStore<Account> {
   }
 
   // ----------------------------------------------------------------
-  // Reglas de derivación automática
+  // Reglas de derivación
   // ----------------------------------------------------------------
   async loadDerivations(targetAccountId: number): Promise<{ sourceAccountId: number; percentage: number }[]> {
     const rules = await this.ruleRepo.findByTargetAccount(targetAccountId)
     return rules.map(rule => ({
-      sourceAccountId: rule.targetAccountId, // Nota: ajusta según tu dominio
+      sourceAccountId: rule.targetAccountId,
       percentage: rule.percentage,
     }))
   }
@@ -145,13 +138,11 @@ export class FinanceStore extends BaseStore<Account> {
     targetAccountId: number,
     derivations: { sourceAccountId: string; percentage: number }[]
   ): Promise<void> {
-    // Eliminar reglas existentes
     const existingRules = await this.ruleRepo.findByTargetAccount(targetAccountId)
     for (const rule of existingRules) {
       await this.ruleRepo.delete(rule.id!)
     }
 
-    // Crear nuevas reglas (solo si el porcentaje es > 0)
     const targetAccount = this._items.value.find(a => a.id === targetAccountId)
     const targetAccountUuid = targetAccount?.uuid || ''
     const now = new Date().toISOString()
@@ -172,20 +163,28 @@ export class FinanceStore extends BaseStore<Account> {
   }
 
   // ----------------------------------------------------------------
-  // Refrescos y actualizaciones de estado
+  // Carga y refrescos
   // ----------------------------------------------------------------
   async loadTransactions(userId: number): Promise<void> {
-    const [incomes, expenses] = await Promise.all([
-      this.incomeRepo.findByUserId(userId),
-      this.expenseRepo.findAll(), // Nota: no filtra por userId, pero se mantiene como estaba
-    ])
+    // 1. Obtener todas las cuentas del usuario
+    const userAccounts = await this.repository.findByUserId(userId)
+    const accountIds = userAccounts.map(a => a.id!).filter(id => id !== undefined) as number[]
+
+    // 2. Cargar ingresos de esas cuentas
+    const incomes = accountIds.length
+      ? await this.incomeRepo.findByAccountIds(accountIds)
+      : []
+
+    // 3. Gastos (se mantienen como estaban, pero podrían optimizarse igual)
+    const expenses = await this.expenseRepo.findAll()
+
     this.incomes.value = incomes
     this.expenses.value = expenses
   }
 
   async refreshBalance(userId: number): Promise<void> {
     this.spendableBalance.value = await this.financeService.calculateSpendableBalance(userId)
-    await this.fetchAll() // Recarga todas las cuentas
+    await this.fetchAll()
   }
 
   private async refreshAccount(accountId: number): Promise<void> {

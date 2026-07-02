@@ -29,8 +29,8 @@ export interface Account extends BaseEntity {
 }
 
 export interface IncomeEntry extends BaseEntity {
-  user_id: number
-  user_uuid: string
+  account_id: number
+  account_uuid: string
   amount: number
   classification: 'pasivo' | 'timeswap' | 'give' | 'otro'
   note?: string

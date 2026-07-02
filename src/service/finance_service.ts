@@ -7,17 +7,15 @@ import { AutoPercentRuleRepository } from '../repository/auto_percent_rule_repos
 import { db } from '../lib/db'
 import { v4 as uuidv4 } from 'uuid'
 
-/* DTO para registrar un ingreso con clasificación financiera. */
 export interface IncomeDTO {
-  userId: number
-  userUuid?: string
+  accountId: number        // ID numérico de la cuenta
+  accountUuid: string      // UUID de la cuenta
   amount: number
   classification: IncomeClassification
   date: string
   note?: string
 }
 
-/* DTO para registrar un gasto asociado a una cuenta. */
 export interface ExpenseDTO {
   accountId: number
   accountUuid?: string
@@ -27,7 +25,6 @@ export interface ExpenseDTO {
   note?: string
 }
 
-/* Servicio que orquesta las operaciones financieras: ingresos, gastos y reglas de asignación automática. */
 export class FinanceService {
   private accountRepo: AccountRepository
   private incomeRepo: IncomeEntryRepository
@@ -46,14 +43,34 @@ export class FinanceService {
     this.ruleRepo = ruleRepo ?? new AutoPercentRuleRepository(db.auto_percent_rules)
   }
 
-  async addIncome(userId: number, data: IncomeDTO): Promise<IncomeEntry> {
+  async addIncome(data: IncomeDTO): Promise<IncomeEntry> {
+    // 1. Validar que la cuenta existe
+    const account = await this.accountRepo.findById(data.accountId)
+    if (!account) throw new Error('Cuenta no encontrada')
+
+    // 2. Crear el ingreso (ya asociado a la cuenta)
     const now = new Date().toISOString()
     const entry = new IncomeEntry(
-      undefined, uuidv4(), now, now,
-      userId, data.userUuid || '', data.amount, data.classification, data.date, data.note
+      undefined,
+      uuidv4(),
+      now,
+      now,
+      data.accountId,
+      data.accountUuid,
+      data.amount,
+      data.classification,
+      data.date,
+      data.note
     )
     const savedEntry = await this.incomeRepo.save(entry)
+
+    // 3. Depositar el monto en la cuenta
+    account.deposit(data.amount)
+    await this.accountRepo.save(account)
+
+    // 4. Aplicar reglas de derivación (si existen)
     await this.applyAutoPercentRules(savedEntry.id!)
+
     return savedEntry
   }
 
@@ -79,8 +96,6 @@ export class FinanceService {
     return spendable.reduce((total, account) => total + account.balance, 0)
   }
 
-  /* Recorre las reglas activas de porcentaje automático y deriva el monto correspondiente
-     a cada cuenta destino al registrar un nuevo ingreso. */
   async applyAutoPercentRules(incomeId: number): Promise<void> {
     const income = await this.incomeRepo.findById(incomeId)
     if (!income) return

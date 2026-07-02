@@ -242,42 +242,63 @@ function openAccountForm(acct?: AccountCard) {
 }
 
 async function saveAccount() {
+  // Validaciones básicas
   if (!acctFormName.value.trim()) return
   if (!currentUser.value) return
-  
+
+  // Preparar derivaciones (sourceAccountId es UUID)
   const derivations: Derivation[] = acctFormAdvanced.value
-    ? acctFormDerivations.value.filter(d => d.pct > 0).map(d => ({ sourceAccountId: d.accountUuid, percentage: d.pct }))
+    ? acctFormDerivations.value
+        .filter(d => d.pct > 0)
+        .map(d => ({ sourceAccountId: d.accountUuid, percentage: d.pct }))
     : []
+
   let accountId: number
   let accountUuid: string
+
+  // ============================================================
+  // 1. Editar cuenta existente
+  // ============================================================
   if (editingAccount.value) {
     const a = editingAccount.value
     a.name = acctFormName.value.trim()
     a.balance = acctFormBalance.value
     a.color = acctFormColor.value
     a.derivations = derivations
+
+    // Obtener la entidad real del store (es una instancia de Account)
     const stored = financeStore.getById(a.id)
     if (stored) {
+      // Actualizar la entidad
       stored.name = a.name
       ;(stored as any).balance = a.balance
-      await financeStore.save(stored as any)
+      // Guardar la entidad (tiene toDB())
+      await financeStore.save(stored)
     }
     accountId = a.id
     accountUuid = a.uuid
-  } else {
-    const saved = await financeStore.save({
-      name: acctFormName.value.trim(),
-      balance: acctFormBalance.value,
-      type: 'spendable',
-    } as any)
-    accountId = saved.id!
-    accountUuid = saved.uuid
+  } 
+  // ============================================================
+  // 2. Crear cuenta nueva
+  // ============================================================
+  else {
+    // ✅ Usar createAccount (crea la entidad Account correctamente)
+    const saved = await financeStore.createAccount(
+      currentUser.value.id!,      // userId (UUID)
+      acctFormName.value.trim(),
+      acctFormBalance.value,
+      'spendable'
+    )
+    accountId = saved.id!   // ID numérico local
+    accountUuid = saved.uuid // UUID de Supabase
+
+    // Actualizar la lista local de cuentas (para la UI)
     accounts.value.push({
       id: accountId,
       uuid: accountUuid,
       name: saved.name,
-      balance: (saved as any).balance,
-      prevBalance: (saved as any).balance,
+      balance: saved.balance,
+      prevBalance: saved.balance,
       color: acctFormColor.value,
       spent: 0,
       trend: 'flat',
@@ -285,19 +306,39 @@ async function saveAccount() {
     })
   }
 
+  // ============================================================
+  // 3. Guardar reglas de derivación (auto_percent_rules)
+  // ============================================================
   const now = new Date().toISOString()
   if (derivations.length > 0) {
-    const existingRules = await db.auto_percent_rules.where('target_account_id').equals(accountId).toArray()
+    // Eliminar reglas existentes para esta cuenta destino
+    // ⚠️ Usar accountUuid (UUID) como target_account_id, no el ID numérico
+    const existingRules = await db.auto_percent_rules
+      .where('target_account_id')
+      .equals(accountUuid)  // ✅ Ahora es UUID
+      .toArray()
+
     for (const rule of existingRules) {
       await db.auto_percent_rules.delete(rule.id!)
     }
+
+    // Crear nuevas reglas
     for (const d of derivations) {
       await db.auto_percent_rules.put({
-        uuid: uuidv4(), created_at: now, updated_at: now, sync_status: 'pending',
-        target_account_id: accountId,source_account_id: accountUuid, percentage: d.percentage, is_active: true,
+        uuid: uuidv4(),
+        created_at: now,
+        updated_at: now,
+        sync_status: 'pending',
+        target_account_id: accountId,
+        target_account_uuid: accountUuid,        // ✅ UUID de la cuenta destino
+        source_account_id: d.sourceAccountId,  // ✅ UUID de la cuenta origen
+        percentage: d.percentage,
+        is_active: true,
       })
     }
   }
+
+  // Cerrar panel
   editPanel.value = false
   editingAccount.value = null
 }
@@ -393,11 +434,12 @@ async function saveTransaction() {
       account: txAccount.value,
     })
   } else {
+    if (!txAccount.value) return
     const derivedList = getDerivedAccounts()
-    const source = accounts.value.find(a => a.name === txAccount.value)
-    if (!source) return
-    source.balance += txAmount.value
-    await financeStore.addIncome(currentUser.value!.id!, { amount: txAmount.value, classification: txIncomeType.value === 'Donativo' ? 'give' : txIncomeType.value === 'Negocio' ? 'otro' : 'timeswap', note: txConcept.value.trim(), date: txDate.value } as any)
+    const IncomeAccount = accounts.value.find(a => a.name === txAccount.value)
+    if (!IncomeAccount) return
+    IncomeAccount.balance += txAmount.value
+    await financeStore.addIncome(IncomeAccount.id, { amount: txAmount.value, classification: txIncomeType.value === 'Donativo' ? 'give' : txIncomeType.value === 'Negocio' ? 'otro' : 'timeswap', note: txConcept.value.trim(), date: txDate.value } as any)
     history.value.push({
       id: Date.now() + Math.floor(Math.random() * 10000),
       concept: `${txConcept.value.trim()} (${txIncomeType.value})`,
@@ -411,7 +453,7 @@ async function saveTransaction() {
     for (const d of derivedList) {
       const actualAmount = txDerivedAmounts.value[d.account.name] ?? d.amount
       if (actualAmount <= 0) continue
-      source.balance -= actualAmount
+      IncomeAccount.balance -= actualAmount
       d.account.balance += actualAmount
       history.value.push({
         id: Date.now() + Math.floor(Math.random() * 10000) + 1,

@@ -16,34 +16,55 @@ export class IncomeEntryRepository extends BaseDexieRepository<IncomeEntryData, 
     return domain.toDB() as IncomeEntryData
   }
 
-  async findByUserId(user_id: number): Promise<IncomeEntry[]> {
-    const data = await this.table.where('user_id').equals(user_id).toArray()
+  // Busca por account_id (local)
+  async findByAccountId(accountId: number): Promise<IncomeEntry[]> {
+    const data = await this.table.where('account_id').equals(accountId).toArray()
     return data.map(entry => this.fromDB(entry))
   }
 
-  async findByDateRange(user_id: number, startDate: string, endDate: string): Promise<IncomeEntry[]> {
+  // Busca por account_uuid (global)
+  async findByAccountUuid(accountUuid: string): Promise<IncomeEntry[]> {
+    const data = await this.table.where('account_uuid').equals(accountUuid).toArray()
+    return data.map(entry => this.fromDB(entry))
+  }
+
+  // Busca por lista de account_ids (para sincronización o consultas por usuario)
+  async findByAccountIds(accountIds: number[]): Promise<IncomeEntry[]> {
+    if (!accountIds.length) return []
     const data = await this.table
-      .where('user_id').equals(user_id)
+      .where('account_id')
+      .anyOf(accountIds)
+      .toArray()
+    return data.map(entry => this.fromDB(entry))
+  }
+
+  // Rango de fechas para una cuenta específica
+  async findByDateRange(accountId: number, startDate: string, endDate: string): Promise<IncomeEntry[]> {
+    const data = await this.table
+      .where('account_id').equals(accountId)
       .filter(entry => entry.date >= startDate && entry.date <= endDate)
       .toArray()
     return data.map(entry => this.fromDB(entry))
   }
 
-  async findByClassification(user_id: number, classification: IncomeEntryData['classification']): Promise<IncomeEntry[]> {
+  // Por clasificación
+  async findByClassification(accountId: number, classification: IncomeEntryData['classification']): Promise<IncomeEntry[]> {
     const data = await this.table
-      .where('user_id').equals(user_id)
+      .where('account_id').equals(accountId)
       .filter(entry => entry.classification === classification)
       .toArray()
     return data.map(entry => this.fromDB(entry))
   }
 
-  async getTotalAmount(user_id: number): Promise<number> {
-    const entries = await this.findByUserId(user_id)
+  // Total de ingresos de una cuenta
+  async getTotalAmount(accountId: number): Promise<number> {
+    const entries = await this.findByAccountId(accountId)
     return entries.reduce((total, entry) => total + entry.amount, 0)
   }
 
-  async getTotalAmountInRange(user_id: number, startDate: string, endDate: string): Promise<number> {
-    const entries = await this.findByDateRange(user_id, startDate, endDate)
+  // Total en un rango de fechas
+  async getTotalAmountInRange(accountId: number, startDate: string, endDate: string): Promise<number> {
+    const entries = await this.findByDateRange(accountId, startDate, endDate)
     return entries.reduce((total, entry) => total + entry.amount, 0)
   }
 }
