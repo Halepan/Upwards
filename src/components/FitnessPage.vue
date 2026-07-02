@@ -416,9 +416,11 @@ const etiquetasCorporales = computed<EtiquetaCorporal[]>(() => {
 })
 
 onMounted(async () => {
-  await fitnessStore.loadAll(currentUser.value!.id!)
-  initFromStore()
-  loadBodyMeasurements()
+  if (currentUser.value?.id) {
+    await fitnessStore.loadAll(currentUser.value.id)
+  } else {
+    console.warn('[FitnessPage] Usuario no autenticado')
+  }
 })
 </script>
 
@@ -430,6 +432,7 @@ onMounted(async () => {
     @save="alGuardarRutina"
     @cancel="alCancelarRutina"
   />
+  
   <WeekPlanner
     v-else-if="modoPlanificacion"
     :items="elementosPlanificador"

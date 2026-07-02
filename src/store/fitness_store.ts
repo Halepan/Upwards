@@ -47,6 +47,10 @@ export class FitnessStore extends BaseStore<Exercise> {
   }
 
   async loadAll(userId: number): Promise<void> {
+    if (!userId || isNaN(userId)) {
+      console.warn('[FitnessStore] loadAll: userId inválido:', userId)
+      return
+    }
     await Promise.all([
       this.fetchAll(),
       this.loadRoutines(userId),
@@ -105,6 +109,11 @@ export class FitnessStore extends BaseStore<Exercise> {
   }
 
   async loadBodyMeasurements(userId: number): Promise<void> {
+    if (!userId || isNaN(userId)) {
+      console.warn('[FitnessStore] loadBodyMeasurements: userId inválido:', userId)
+      this.bodyMeasurements.value = []
+      return
+    }
     this.bodyMeasurements.value = await db.body_measurements.where({ user_id: userId }).toArray() as any
   }
 
