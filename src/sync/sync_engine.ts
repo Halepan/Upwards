@@ -42,18 +42,19 @@ export class SyncEngine implements ISyncEngine {
   // ================================================================
   // ENCOLAR OPERACIÓN
   // ================================================================
-  async enqueue(operation: string, table: string, record: BaseEntity): Promise<void> {
+// sync_engine.ts
+  async enqueue(operation: string, table: string, record: BaseEntity, supabasePayload?: any): Promise<void> {
     console.log("estoy siendo encolada desde ", table,"para", operation)
     await db.sync_queue.add({
       operation: operation as SyncQueueEntry['operation'],
       table_name: table,
       record_id: record.id!,
       record_uuid: record.uuid,
-      payload: { ...record },
+      payload: supabasePayload || { ...record }, // ✅ priorizar el payload transformado
       timestamp: new Date().toISOString(),
       attempts: 0,
     })
-  }
+}
 
   // ================================================================
   // PROCESAR COLA
@@ -68,7 +69,7 @@ export class SyncEngine implements ISyncEngine {
       if (b.table_name === 'users') return 1
       return 0
     })
-
+    console.log("entro en el bucle")
     for (const entry of sorted) {
       try {
         await this.processEntry(entry)
@@ -95,63 +96,47 @@ export class SyncEngine implements ISyncEngine {
   // PROCESAR UNA ENTRADA
   // ================================================================
   private async processEntry(entry: SyncQueueEntry): Promise<void> {
-  const remoteTable = TABLE_MAPPING[entry.table_name]
-  if (!remoteTable) throw new Error(`Tabla desconocida: ${entry.table_name}`)
+    const remoteTable = TABLE_MAPPING[entry.table_name]
+    console.log("prooccesanding")
+    if (!remoteTable) throw new Error(`Tabla desconocida: ${entry.table_name}`)
 
-  // 1. Clonar y limpiar payload
-  const payload = { ...entry.payload }
-
-  // 2. Mapear 'uuid' a 'id' (clave primaria en Supabase)
-  if (payload.uuid && !payload.id) {
-    payload.id = payload.uuid
-  }
-  delete payload.uuid
-
-  // 3. Eliminar campos que NO existen en Supabase
-  delete payload.sync_status
-  delete payload.created_at  // (opcional, Supabase los genera automáticamente)
-  delete payload.updated_at
-
-  // 4. Transformar campos '*_uuid' a '*_id' (claves foráneas)
-  const uuidFields = Object.keys(payload).filter(k => k.endsWith('_uuid'))
-  for (const uuidKey of uuidFields) {
-    const fkKey = uuidKey.replace(/_uuid$/, '_id')
-    payload[fkKey] = payload[uuidKey]  // Asignar el valor UUID
-    delete payload[uuidKey]            // Eliminar el campo _uuid
-  }
-
-  // 5. Eliminar campos '*_id' que sean números (IDs locales) si existen
-  const idFields = Object.keys(payload).filter(k => k.endsWith('_id') && typeof payload[k] === 'number')
-  for (const idKey of idFields) {
-    delete payload[idKey]
-  }
-
-  // 6. Para la tabla 'users': usar 'id' como clave primaria (ya lo tenemos)
-  //    Para 'auto_percent_rules': cuidado con source_account_id y target_account_id
-  //    (ambos son UUID, ya transformados desde source_account_uuid y target_account_uuid)
-
-  console.log(`[SyncEngine] Enviando a ${remoteTable}:`, payload)
-
-  switch (entry.operation) {
-    case 'create': {
-      const { error } = await supabase.from(remoteTable).insert(payload)
-      if (error) throw error
-      break
+    // Obtener el objeto de la entidad desde el payload (es una instancia de la entidad)
+    // Nota: el payload guardado en sync_queue es el objeto original, no el toDB().
+    // Por lo tanto, debería tener el método toSupabase().
+    const entity = entry.payload as any
+    if (typeof entity.toSupabase !== 'function') {
+      console.log("error por no tener metodo supabase")
+      throw new Error(`La entidad ${entry.table_name} no tiene método toSupabase()`)
     }
-    case 'update': {
-      const { error } = await supabase.from(remoteTable).upsert(payload, { onConflict: 'id' })
-      if (error) throw error
-      break
+    console.log("entity.toSupabase()")
+    const supabasePayload = entity.toSupabase()
+    switch (entry.operation) {
+      case 'create':{
+        const { error } = await supabase
+          .from(remoteTable)
+          .insert(supabasePayload)
+        if (error) throw error
+        break
+      }
+      case 'update': {
+        const { error } = await supabase
+          .from(remoteTable)
+          .upsert(supabasePayload, { onConflict: 'id' })
+        if (error) throw error
+        break
+      }
+      case 'delete': {
+        const { error } = await supabase
+          .from(remoteTable)
+          .delete()
+          .eq('id', entry.record_uuid!)
+        if (error) throw error
+        break
+      }
+      default:
+        throw new Error(`Operación desconocida: ${entry.operation}`)
     }
-    case 'delete': {
-      const { error } = await supabase.from(remoteTable).delete().eq('id', entry.record_uuid!)
-      if (error) throw error
-      break
-    }
-    default:
-      throw new Error(`Operación desconocida: ${entry.operation}`)
-  }
-}
+} 
   // ================================================================
   // MARCAR CONFLICTO
   // ================================================================

@@ -6,7 +6,7 @@ import type { BaseEntity } from '../lib/db'
 /* Store base abstracta que gestiona el estado reactivo de una entidad.
    Proporciona operaciones CRUD completas con manejo de errores y loading.
    Cada subclase debe proveer el repositorio correspondiente. */
-export abstract class BaseStore<T extends { id?: number; uuid: string }> {
+export abstract class BaseStore<T extends BaseEntity> {
   protected _items: Ref<T[]>
   protected _isLoading: Ref<boolean>
   protected _error: Ref<string | null>
@@ -77,14 +77,18 @@ export abstract class BaseStore<T extends { id?: number; uuid: string }> {
       console.log(this._syncEngine , this._tableName)
       // 🔥 Encolar operación de sincronización
       console.log("delante de la condicional de basestore")
+      // base_store.ts - en el método save
       if (this._syncEngine && this._tableName) {
         try {
           const operation = (item as any).id ? 'update' : 'create';
-          await this._syncEngine.enqueue(operation, this._tableName, saved as any as BaseEntity);
+          // ✅ Guardar el resultado de toSupabase() en el payload
+          const supabasePayload = (saved as any).toSupabase?.() || saved
+          await this._syncEngine.enqueue(operation, this._tableName, saved, supabasePayload)
         } catch (syncError) {
           console.warn('[BaseStore] Error al encolar operación:', syncError);
         }
-      }else console.log("no entro porque " ,this._syncEngine, this._tableName)
+      }
+      else console.log("no entro porque " ,this._syncEngine, this._tableName)
 
       return saved
     } catch (cause) {
