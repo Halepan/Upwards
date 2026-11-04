@@ -1,0 +1,96 @@
+/* Registro diario de ejecución de una rutina completa.
+   Registra si se completó y las notas del entrenamiento. */
+import { BaseEntity } from './base_entity'
+
+export class RoutineLog extends BaseEntity {
+  private _routineId: number
+  private _routineUuid: string
+  private _date: string
+  private _notes?: string
+  private _completed: boolean
+
+  constructor(
+    id: number | undefined,
+    uuid: string,
+    createdAt: string,
+    updatedAt: string,
+    routineId: number,
+    routineUuid: string,
+    date: string,
+    notes?: string,
+    completed: boolean = false
+  ) {
+    super(id, uuid, createdAt, updatedAt)
+    this._routineId = routineId
+    this._routineUuid = routineUuid
+    this._date = date
+    this._notes = notes
+    this._completed = completed
+  }
+
+  get routineId(): number { return this._routineId }
+  get routineUuid(): string { return this._routineUuid }
+  get date(): string { return this._date }
+  get notes(): string | undefined { return this._notes }
+  get completed(): boolean { return this._completed }
+
+  set notes(value: string | undefined) {
+    this._notes = value
+    this.updateTimestamp()
+  }
+
+  complete(): void {
+    this._completed = true
+    this.updateTimestamp()
+  }
+
+  reset(): void {
+    this._completed = false
+    this.updateTimestamp()
+  }
+
+  isCompleted(): boolean {
+    return this._completed
+  }
+
+  static fromDB(data: any): RoutineLog {
+    return new RoutineLog(
+      data.id,
+      data.uuid,
+      data.created_at,
+      data.updated_at,
+      data.routine_id,
+      data.routine_uuid,
+      data.date,
+      data.notes,
+      data.completed
+    )
+  }
+
+  toDB(): any {
+    return {
+      id: this._id,
+      uuid: this._uuid,
+      routine_id: this._routineId,
+      routine_uuid: this._routineUuid,
+      date: this._date,
+      notes: this._notes,
+      completed: this._completed,
+      created_at: this._createdAt,
+      updated_at: this._updatedAt,
+      sync_status: 'pending'
+    }
+  }
+
+  toSupabase(): any {
+    return {
+      id: this._uuid,
+      routine_id: this._routineUuid,
+      date: this._date,
+      notes: this._notes,
+      completed: this._completed,
+      created_at: this._createdAt,
+      updated_at: this._updatedAt,
+    }
+  }
+}

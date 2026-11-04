@@ -1,0 +1,209 @@
+import { ref, type Ref } from 'vue'
+import { db } from '../lib/db'
+import { Habit } from '../domain/habit'
+import { HabitLog, type HabitStatus } from '../domain/habit_log'
+import { Week } from '../domain/week'
+import { HabitWeekPlan } from '../domain/habit_week_plan'
+import { HabitRepository } from '../repository/habit_repository'
+import { HabitLogRepository } from '../repository/habit_log_repository'
+import { WeekRepository } from '../repository/week_repository'
+import { HabitWeekPlanRepository } from '../repository/habit_week_plan_repository'
+import { HabitService, type CreateHabitDTO, type WeeklyProgress } from '../service/habit_service'
+import { BaseStore } from './base_store'
+import { useAuthStore } from './auth_store'
+import { v4 as uuidv4 } from 'uuid'
+
+export class HabitStore extends BaseStore<Habit> {
+  protected repository: HabitRepository
+  private service: HabitService
+  private logRepo: HabitLogRepository
+  private weekRepo: WeekRepository
+  private weekPlanRepo: HabitWeekPlanRepository
+
+  logs: Ref<HabitLog[]>
+  allLogs: Ref<HabitLog[]>
+  weeklyProgress: Ref<WeeklyProgress | null>
+  selectedHabit: Ref<Habit | null>
+  plannedForToday: Ref<number[]>
+  currentWeekStart: Ref<string>
+  plannedforWeek:  Ref<Record<number,number[]>>
+  counthabitforweek: Ref<number>
+
+  constructor() {
+    super()
+    const habitRepo = new HabitRepository(db.habits)
+    this.logRepo = new HabitLogRepository(db.habit_logs)
+    this.weekRepo = new WeekRepository(db.weeks)
+    this.weekPlanRepo = new HabitWeekPlanRepository(db.habit_week_plans)
+
+    this.repository = habitRepo
+    this.service = new HabitService(habitRepo, this.logRepo, this.weekRepo, this.weekPlanRepo)
+
+    this.logs = ref<HabitLog[]>([]) as Ref<HabitLog[]>
+    this.allLogs = ref<HabitLog[]>([]) as Ref<HabitLog[]>
+    this.weeklyProgress = ref<WeeklyProgress | null>(null)
+    this.selectedHabit = ref<Habit | null>(null) as Ref<Habit | null>
+    this.plannedForToday = ref<number[]>([]) as Ref<number[]>
+    this.currentWeekStart = ref('') as Ref<string>
+    this.plannedforWeek =   ref<Record<number,number[]>>({}) as Ref<Record<number, number[]>>
+    this.counthabitforweek = ref() as Ref<number>  
+  }
+
+  async loadAll(): Promise<void> {
+    await this.fetchAll()
+    this.allLogs.value = await this.logRepo.findAll()
+  }
+
+  async createHabit(data: CreateHabitDTO): Promise<Habit> {
+    const dataWithUuid: CreateHabitDTO = {
+      ...data,
+      userUuid: useAuthStore().currentUser?.uuid || '',
+    }
+    // Crear hábito usando el servicio
+    const habit = await this.service.createHabit(dataWithUuid.userId, dataWithUuid)
+    // ✅ Usar this.save para encolar automáticamente
+    const saved = await this.save(habit)
+    await this.loadWeekPlans()
+    return saved
+  }
+
+  async markDay(habitId: number, date: string, status: HabitStatus): Promise<void> {
+    const habit = this._items.value.find(h => h.id === habitId)
+    await this.service.markDay(habitId, date, status, habit?.uuid)
+    await this.refreshLogs(habitId)
+  }
+
+  async toggleDay(habitId: number, date: string): Promise<void> {
+    const existing = this.allLogs.value.find(l => l.habitId === habitId && l.date === date)
+    const habit = this._items.value.find(h => h.id === habitId)
+    if (existing) {
+      const newStatus: HabitStatus = existing.status === 'completed' ? 'missed' : 'completed'
+      await this.service.markDay(habitId, date, newStatus, habit?.uuid)
+    } else {
+      await this.service.markDay(habitId, date, 'completed', habit?.uuid)
+    }
+    this.allLogs.value = await this.logRepo.findAll()
+  }
+
+  async loadWeeklyProgress(habitId: number, weekStart: string): Promise<void> {
+    this.weeklyProgress.value = await this.service.getWeeklyProgress(habitId, weekStart)
+  }
+
+  async archiveHabit(habitId: number): Promise<void> {
+    await this.repository.archiveHabit(habitId)
+    const habit = this.getById(habitId)
+    if (habit) {
+      habit.archive()
+    }
+  }
+
+  async deleteHabit(habitId: number): Promise<void> {
+    await this.deleteById(habitId)
+    this.allLogs.value = this.allLogs.value.filter(l => l.habitId !== habitId)
+    await this.loadWeekPlans()
+  }
+
+  async selectHabit(habit: Habit): Promise<void> {
+    this.selectedHabit.value = habit
+    await this.refreshLogs(habit.id!)
+  }
+
+  private async refreshLogs(habitId: number): Promise<void> {
+    if (!this.selectedHabit.value || this.selectedHabit.value.id !== habitId) return
+    this.logs.value = await this.logRepo.findByHabitInRange(
+      habitId,
+      this.getWeekStart(),
+      this.getWeekEnd()
+    )
+  }
+
+  async saveWeekPlan(assignments: Record<number, number[]>): Promise<void> {
+    const weekStart = this.getWeekStart()
+    this.currentWeekStart.value = weekStart
+    let week = await this.weekRepo.findByStartDate(weekStart)
+    if (!week) {
+      console.log("la semana no existe")
+      const userUuid = useAuthStore().currentUser?.uuid || ''
+      const now = new Date().toISOString()
+      const endDate = this.getWeekEnd()
+      week = await this.weekRepo.save(new Week(
+        undefined, uuidv4(), now, now,
+        0, userUuid, weekStart, endDate
+      ))
+    }
+    const existingPlans = await this.weekPlanRepo.findAllByWeek(week.id!)
+    for (const plan of existingPlans) {
+      await this.weekPlanRepo.delete(plan.id!)
+    }
+    for (const [habitIdStr, days] of Object.entries(assignments)) {
+      const habitId = Number(habitIdStr)
+      if (days.length === 0) continue
+      const now = new Date().toISOString()
+      const habit = this._items.value.find(h => h.id === habitId)
+      const plan = new HabitWeekPlan(
+        undefined, uuidv4(), now, now,
+        habitId, habit?.uuid || '', week.id!, week.uuid, days
+      )
+      await this.weekPlanRepo.save(plan)
+    }
+    this.loadWeekPlans()
+  }
+
+  async loadWeekPlans(last?: boolean): Promise<void> {
+    let ides: number[] = []
+    const weekStart = this.getWeekStart(last)
+    const today = new Date()
+    const dayIndex = ((today.getDay() + 6) % 7)
+    this.currentWeekStart.value = weekStart
+    const week = await this.weekRepo.findByStartDate(weekStart)
+    
+    if (!week) {
+      this.plannedForToday.value = []
+      return
+    }
+   
+    for (let index = 0; index < 7; index++) {
+      const element = await this.weekPlanRepo.findByHabitAndWeek(index, week.id!);
+      if (element?.plannedDays){
+         this.plannedforWeek.value[index] = element.plannedDays
+         ides = [...ides, ...element.plannedDays.filter(e=> !ides.includes(e))]
+         const temp = ides.reduce<number[]>((acc, n)=>{
+          if(!acc.includes(n)) acc.push(n)
+          return acc 
+         },[])
+         ides = temp
+        }
+      
+    }
+
+    if (last) return
+
+    const lhabits = this.plannedforWeek.value[dayIndex]
+    if (!lhabits){
+      this.plannedForToday.value = []
+      return
+    }
+    this.counthabitforweek.value = ides.length
+    this.plannedForToday.value = lhabits
+    }
+
+  private getWeekStart(last?:boolean): string {
+    const now = new Date()
+    const dayOfWeek = now.getDay()
+    let past = 0
+
+    if(last){
+      past = 7
+    }
+    const diff = (now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1))-past
+    const monday = new Date(now.setDate(diff))
+    return monday.toISOString().split('T')[0]
+  }
+
+  private getWeekEnd(): string {
+    const start = new Date(this.getWeekStart())
+    const sunday = new Date(start)
+    sunday.setDate(sunday.getDate() + 6)
+    return sunday.toISOString().split('T')[0]
+  }
+}
